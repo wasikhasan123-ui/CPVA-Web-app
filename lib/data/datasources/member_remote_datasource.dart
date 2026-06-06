@@ -199,6 +199,8 @@ class MemberRemoteDataSource {
       await _firestore.setDocument(_collection, member.id, member.toJson());
     }
     await _loadOverrides();
+    await _loadDeletes();
+
     final idx = _overrides!.indexWhere((m) => m.id == member.id);
     if (idx >= 0) {
       _overrides![idx] = member;

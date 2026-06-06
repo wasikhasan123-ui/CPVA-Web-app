@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/di/injection.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/drive_url_helper.dart';
 import '../../../data/datasources/member_photo_cache.dart';
 import '../../../data/datasources/photo_service.dart';
 
@@ -59,7 +60,10 @@ class _PhotoAvatarState extends State<PhotoAvatar> {
 
   Future<void> _resolve() async {
     final id = widget.ownerId;
-    final url = widget.photoUrl;
+    final rawUrl = widget.photoUrl;
+    final url = (rawUrl != null && rawUrl.isNotEmpty)
+        ? DriveUrlHelper.convertToDirectImageUrl(rawUrl)
+        : null;
     String? customPath;
     Uint8List? customBytes;
     Uint8List? cached;

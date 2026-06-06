@@ -11,6 +11,7 @@ import '../../../data/datasources/imgbb_service.dart';
 import '../../../data/datasources/member_remote_datasource.dart';
 import '../../../data/datasources/registration_remote_datasource.dart';
 import '../../../data/datasources/remote/firestore_service.dart';
+import '../../../data/datasources/remote/password_service.dart';
 import '../../../data/datasources/remote/remote_content_datasource.dart';
 import '../../../data/models/member_model.dart';
 import '../../../domain/repositories/auth_repository.dart';
@@ -234,6 +235,46 @@ class _AdminPanelPageState extends State<AdminPanelPage>
             onTap: _importFromCsv,
           ),
         ),
+        const SizedBox(height: 12),
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: ListTile(
+            leading: const Icon(
+              Icons.restore,
+              color: AppColors.error,
+              size: 32,
+            ),
+            title: const Text(
+              'Restore Original Members',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text(
+              'Recover old member directory and profile photos from bundled app data',
+            ),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: _restoreOriginalMembers,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            leading: const Icon(Icons.delete_forever,
+                color: AppColors.error, size: 32),
+            title: const Text('Delete All Members',
+                style: TextStyle(
+                    fontWeight: FontWeight.w600, color: AppColors.error)),
+            subtitle: const Text(
+                'Permanently delete every member and their password. Use before re-importing the full CSV.'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: _deleteAllMembers,
+          ),
+        ),
       ],
     );
   }
@@ -296,123 +337,220 @@ class _AdminPanelPageState extends State<AdminPanelPage>
   }
 
   Future<void> _importFromCsv() async {
-    try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['csv'],
-        withData: true,
-      );
-      if (result == null || result.files.isEmpty) return;
-      final file = result.files.single;
-      final bytes = file.bytes;
-      if (bytes == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not read CSV file'),
-              backgroundColor: AppColors.error,
-            ),
-          );
-        }
-        return;
-      }
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['csv'],
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
 
-      if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.hideCurrentSnackBar();
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Row(
-            children: [
-              SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
-                ),
-              ),
-              SizedBox(width: 12),
-              Text('Importing members...'),
-            ],
-          ),
-          backgroundColor: AppColors.info,
-          duration: Duration(minutes: 5),
+    final bytes = result.files.first.bytes!;
+    final content = utf8.decode(bytes);
+    if (content.trim().isEmpty) return;
+
+    final imported = await _processCsv(content);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully imported $imported members'),
+          backgroundColor:
+              imported > 0 ? AppColors.success : AppColors.error,
         ),
       );
+    }
+  }
 
-      var content = utf8.decode(bytes);
-      if (content.startsWith('\uFEFF')) {
-        content = content.substring(1);
-      }
-      final imported = await _processCsv(content);
+  Future<void> _deleteAllMembers() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: const Text('Delete ALL members?'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'This permanently removes every member document and every password.',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Type DELETE in capital letters to confirm.',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Type DELETE',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.error,
+                foregroundColor: AppColors.white,
+              ),
+              onPressed: () {
+                if (controller.text.trim() == 'DELETE') {
+                  Navigator.pop(ctx, true);
+                }
+              },
+              child: const Text('Delete all'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirm != true) return;
 
-      if (mounted) {
-        messenger.hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Successfully imported $imported members'),
-            backgroundColor: AppColors.success,
-          ),
-        );
+    final firestore = sl<FirestoreService>();
+    final passwordService = sl<PasswordService>();
+
+    int deleted = 0;
+    int failed = 0;
+    String? errorMessage;
+
+    try {
+      final docs = await firestore.getCollection('members');
+      print('DeleteAll: found ${docs.length} members');
+      for (final doc in docs) {
+        final id = doc['id']?.toString() ?? '';
+        if (id.isEmpty) continue;
+        try {
+          await firestore.deleteDocument('members', id);
+          try {
+            await passwordService.deletePassword(id);
+          } catch (_) {}
+          deleted++;
+        } catch (e) {
+          failed++;
+          print('DeleteAll: failed to delete $id: $e');
+        }
       }
-    } catch (e, st) {
-      print('Import error: $e');
-      print(st);
-      if (mounted) {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Import failed: $e'),
-            backgroundColor: AppColors.error,
-            duration: const Duration(seconds: 8),
+    } catch (e) {
+      errorMessage = e.toString();
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            errorMessage ??
+                'Deleted $deleted members${failed > 0 ? ' ($failed failed)' : ''}',
           ),
-        );
-      }
+          backgroundColor: errorMessage == null && failed == 0
+              ? AppColors.success
+              : AppColors.error,
+        ),
+      );
     }
   }
 
   Future<int> _processCsv(String content) async {
-    final lines = const LineSplitter().convert(content);
+    final rows = _parseCsvRows(content);
+
     int headerIdx = -1;
-    for (int i = 0; i < lines.length; i++) {
-      if (lines[i].trim().isNotEmpty) {
+    for (int i = 0; i < rows.length; i++) {
+      if (rows[i].any((cell) => _safe(cell).isNotEmpty)) {
         headerIdx = i;
         break;
       }
     }
+
     if (headerIdx < 0) return 0;
 
-    final headers = _parseCsvLine(lines[headerIdx])
-        .map((h) => h.trim().toLowerCase())
+    final headers = rows[headerIdx]
+        .map((h) => _safe(h).trim().toLowerCase())
         .toList();
+
     print('CSV headers detected: $headers');
 
     final headerToField = <int, String>{};
+
     for (int i = 0; i < headers.length; i++) {
-      final field = _kHeaderToField[headers[i]];
-      if (field != null) headerToField[i] = field;
+      final header = headers[i];
+
+      if (header == 'timestamp' || header.startsWith('i hereby declare')) {
+        continue;
+      }
+
+      final field = _kHeaderToField[header];
+      if (field != null) {
+        headerToField[i] = field;
+      }
     }
+
     print('Header to field map: $headerToField');
 
     final dataSource = sl<MemberRemoteDataSource>();
+
+    // Load existing members once so we can skip them.
+    final existingMembers = await dataSource.getAllMembers();
+
+    final existingKeys = <String>{};
+    for (final member in existingMembers) {
+      final idKey = _cleanMobile(member.id);
+      final mobileKey = _cleanMobile(member.mobile);
+
+      if (idKey.isNotEmpty) existingKeys.add(idKey);
+      if (mobileKey.isNotEmpty) existingKeys.add(mobileKey);
+    }
+
     int imported = 0;
-    for (int i = headerIdx + 1; i < lines.length; i++) {
+    int skippedExisting = 0;
+    int skippedInvalid = 0;
+
+    for (int rowIndex = headerIdx + 1; rowIndex < rows.length; rowIndex++) {
       try {
-        final line = lines[i].trim();
-        if (line.isEmpty) continue;
-        final cells = _parseCsvLine(line);
-        final values = <String, String>{};
-        headerToField.forEach((idx, field) {
-          if (idx < cells.length) {
-            values[field] = _safe(cells[idx]);
-          }
-        });
-        final mobile = _cleanMobile(values['mobile'] ?? '');
-        if (mobile.isEmpty || mobile.length < 10) {
-          print('Skipping row $i: invalid mobile "${values['mobile']}"');
+        final cells = rows[rowIndex];
+
+        if (cells.every((cell) => _safe(cell).isEmpty)) {
           continue;
         }
+
+        final values = <String, String>{};
+
+        headerToField.forEach((columnIndex, fieldName) {
+          if (columnIndex < cells.length) {
+            values[fieldName] = _safe(cells[columnIndex]);
+          }
+        });
+
+        final mobile = _cleanMobile(values['mobile'] ?? '');
+
+        if (mobile.isEmpty || mobile.length < 10) {
+          skippedInvalid++;
+          print(
+            'Skipping CSV row ${rowIndex + 1}: invalid mobile "${values['mobile']}"',
+          );
+          continue;
+        }
+
+        // Important: do not overwrite existing members.
+        if (existingKeys.contains(mobile)) {
+          skippedExisting++;
+          print(
+            'Skipping CSV row ${rowIndex + 1}: existing member $mobile / ${values['name']}',
+          );
+          continue;
+        }
+
+        final rawPhotoUrl = _safe(values['photoUrl']);
+        final rawLicenseUrl = _safe(values['licenseUrl']);
 
         final member = MemberModel(
           id: mobile,
@@ -439,17 +577,79 @@ class _AdminPanelPageState extends State<AdminPanelPage>
           workType: _safe(values['workType']),
           instituteName: _safe(values['instituteName']),
           interests: _safe(values['interests']),
-          photoUrl: _safe(values['photoUrl']),
-          licenseUrl: _safe(values['licenseUrl']),
+
+          // Only save usable image URLs. Convert Google Drive URLs to direct image URLs.
+          photoUrl: _cleanPhotoUrl(rawPhotoUrl),
+
+          // License can stay as a normal web URL.
+          licenseUrl: _isUsableWebUrl(rawLicenseUrl) ? rawLicenseUrl : '',
         );
+
         await dataSource.saveMember(member);
+
+        existingKeys.add(mobile);
         imported++;
+
+        print('Saved CSV row ${rowIndex + 1}: ${member.name} / ${member.mobile}');
       } catch (rowError, rowSt) {
-        print('Row $i failed: $rowError');
+        print('CSV row ${rowIndex + 1} failed: $rowError');
         print(rowSt);
       }
     }
+
+    print(
+      'CSV import finished. Imported: $imported, skipped existing: $skippedExisting, skipped invalid: $skippedInvalid',
+    );
+
     return imported;
+  }
+
+  List<List<String>> _parseCsvRows(String content) {
+    final rows = <List<String>>[];
+    var row = <String>[];
+    final buffer = StringBuffer();
+    bool inQuotes = false;
+
+    for (int i = 0; i < content.length; i++) {
+      final char = content[i];
+
+      if (char == '"') {
+        if (inQuotes && i + 1 < content.length && content[i + 1] == '"') {
+          buffer.write('"');
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char == ',' && !inQuotes) {
+        row.add(buffer.toString().trim());
+        buffer.clear();
+      } else if ((char == '\n' || char == '\r') && !inQuotes) {
+        if (char == '\r' && i + 1 < content.length && content[i + 1] == '\n') {
+          i++;
+        }
+
+        row.add(buffer.toString().trim());
+        buffer.clear();
+
+        if (row.any((cell) => cell.trim().isNotEmpty)) {
+          rows.add(row);
+        }
+
+        row = <String>[];
+      } else {
+        buffer.write(char);
+      }
+    }
+
+    if (buffer.isNotEmpty || row.isNotEmpty) {
+      row.add(buffer.toString().trim());
+
+      if (row.any((cell) => cell.trim().isNotEmpty)) {
+        rows.add(row);
+      }
+    }
+
+    return rows;
   }
 
   String _safe(dynamic val) {
@@ -461,16 +661,63 @@ class _AdminPanelPageState extends State<AdminPanelPage>
 
   String _cleanMobile(String raw) {
     String v = raw.trim().replaceAll(RegExp(r'[^\d+]'), '');
+
     if (v.startsWith('+880')) {
       v = '0${v.substring(4)}';
     } else if (v.startsWith('880') && v.length > 10) {
       v = '0${v.substring(3)}';
     }
+
     v = v.replaceAll(RegExp(r'[^\d]'), '');
+
     if (v.length == 10 && !v.startsWith('0')) {
       v = '0$v';
     }
+
     return v;
+  }
+
+  bool _isUsableWebUrl(String value) {
+    final v = value.trim().toLowerCase();
+    return v.startsWith('http://') || v.startsWith('https://');
+  }
+
+  String _cleanPhotoUrl(String value) {
+    final raw = value.trim();
+
+    if (!_isUsableWebUrl(raw)) {
+      return '';
+    }
+
+    final directGoogleUrl = _convertGoogleDriveToDirectImageUrl(raw);
+    return directGoogleUrl ?? raw;
+  }
+
+  String? _convertGoogleDriveToDirectImageUrl(String input) {
+    if (input.isEmpty) return null;
+
+    if (input.contains('drive.google.com') ||
+        input.contains('drive.usercontent.google.com')) {
+      final patterns = [
+        RegExp(r'/file/d/([a-zA-Z0-9_-]+)'),
+        RegExp(r'[?&]id=([a-zA-Z0-9_-]+)'),
+        RegExp(r'/d/([a-zA-Z0-9_-]+)'),
+      ];
+
+      for (final pattern in patterns) {
+        final match = pattern.firstMatch(input);
+        if (match != null) {
+          return 'https://lh3.googleusercontent.com/d/${match.group(1)}';
+        }
+      }
+    }
+
+    if (input.contains('lh3.googleusercontent.com') ||
+        input.contains('googleusercontent.com')) {
+      return input;
+    }
+
+    return null;
   }
 
   static const Map<String, String> _kHeaderToField = {
@@ -498,28 +745,67 @@ class _AdminPanelPageState extends State<AdminPanelPage>
     'bvc licences copy': 'licenseUrl',
   };
 
-  List<String> _parseCsvLine(String line) {
-    final result = <String>[];
-    final sb = StringBuffer();
-    bool inQuotes = false;
-    for (int i = 0; i < line.length; i++) {
-      final ch = line[i];
-      if (ch == '"') {
-        if (inQuotes && i + 1 < line.length && line[i + 1] == '"') {
-          sb.write('"');
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (ch == ',' && !inQuotes) {
-        result.add(sb.toString());
-        sb.clear();
-      } else {
-        sb.write(ch);
-      }
+  Future<void> _restoreOriginalMembers() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Restore Original Members?'),
+        content: const Text(
+          'This will delete the current cloud member directory and restore the original members from assets/data/members.json.\n\n'
+          'Use this to recover from a bad CSV import. Old profile image URLs from the bundled data will be restored.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+            ),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text('Restoring original members...'),
+        duration: Duration(minutes: 5),
+      ),
+    );
+
+    try {
+      await sl<MemberRemoteDataSource>().resetAdminChanges();
+
+      if (!mounted) return;
+
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Original members restored successfully'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Restore failed: $e'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 8),
+        ),
+      );
     }
-    result.add(sb.toString());
-    return result;
   }
 
   Future<void> _fixMobileNumbers() async {

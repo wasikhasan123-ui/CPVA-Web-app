@@ -345,7 +345,7 @@ class AuthRepositoryImpl implements AuthRepository {
       if (hash != null && hash.isNotEmpty) return hash;
     }
     if (_isAdminMemberId(memberId)) {
-      return _hashPassword('(admin)');
+      return _hashPassword('admin');
     }
     return _hashPassword(_defaultPassword);
   }
