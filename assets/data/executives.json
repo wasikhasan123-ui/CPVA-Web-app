@@ -1,0 +1,103 @@
+{
+    "executives": [
+        {
+            "id": "Cpva-2026-01",
+            "name": "Dr. Mohammad Ismail",
+            "nameBn": "ডাঃ মোহাম্মদ ইসমাইল",
+            "designation": "President",
+            "designationBn": "সভাপতি",
+            "mobile": "01842551234",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-02",
+            "name": "Dr. Mohammad Forhad Hossain",
+            "nameBn": "ডাঃ মোহাম্মদ ফরহাদ হোসেন",
+            "designation": "Vice-President",
+            "designationBn": "সহ-সভাপতি",
+            "mobile": "01708832784",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-03",
+            "name": "Dr. Md. Nurul Azim",
+            "nameBn": "ডাঃ মো. নুরুল আজিম",
+            "designation": "General Secretary",
+            "designationBn": "সাধারণ সম্পাদক",
+            "mobile": "01814421192",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-04",
+            "name": "Dr. Md. Mobarak Hossain",
+            "nameBn": "ডাঃ মো. মোবারক হোসেন",
+            "designation": "Joint Secretary",
+            "designationBn": "যুগ্ম সম্পাদক",
+            "mobile": "01329741545",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-05",
+            "name": "Dr. Mohammad Mohiuddin Akram",
+            "nameBn": "ডাঃ মোহাম্মদ মহিউদ্দিন আকরাম",
+            "designation": "Organizing Secretary",
+            "designationBn": "সাংগঠনিক সম্পাদক",
+            "mobile": "01921337889",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-06",
+            "name": "Dr. Mohammad Nurul Islam Nahid",
+            "nameBn": "ডাঃ মোহাম্মদ নুরুল ইসলাম নাহিদ",
+            "designation": "Treasurer",
+            "designationBn": "কোষাধ্যক্ষ",
+            "mobile": "01813059794",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-07",
+            "name": "Dr. Faria Amin",
+            "nameBn": "ডাঃ ফারিয়া আমিন",
+            "designation": "Women Development, Social & Animal Welfare Secretary",
+            "designationBn": "মহিলা উন্নয়ন, সমাজ ও প্রাণী কল্যাণ সম্পাদক",
+            "mobile": "01690096247",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-08",
+            "name": "Dr. Mohammad Foysal",
+            "nameBn": "ডাঃ মোহাম্মদ ফয়সাল",
+            "designation": "Information, Publicity & Publication Secretary",
+            "designationBn": "তথ্য, প্রচার ও প্রকাশনা সম্পাদক",
+            "mobile": "01836095129",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-09",
+            "name": "Dr. Palash Sen",
+            "nameBn": "ডাঃ পলাশ সেন",
+            "designation": "Cultural & Sports Secretary",
+            "designationBn": "সাংস্কৃতিক ও ক্রীড়া সম্পাদক",
+            "mobile": "01821120362",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-10",
+            "name": "Dr. Imdadul Hoque Bhuiyan",
+            "nameBn": "ডাঃ ইমদাদুল হক ভূইয়া",
+            "designation": "Executive Member",
+            "designationBn": "নির্বাহী সদস্য",
+            "mobile": "01853548853",
+            "photoUrl": ""
+        },
+        {
+            "id": "Cpva-2026-11",
+            "name": "Dr. Md. Nazim Uddin",
+            "nameBn": "ডাঃ মো. নাজিম উদ্দিন",
+            "designation": "Executive Member",
+            "designationBn": "নির্বাহী সদস্য",
+            "mobile": "01823553314",
+            "photoUrl": ""
+        }
+    ]
+}

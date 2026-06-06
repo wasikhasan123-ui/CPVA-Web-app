@@ -1,0 +1,93 @@
+import '../../domain/entities/member_entity.dart';
+
+class MemberModel extends MemberEntity {
+  const MemberModel({
+    required super.id,
+    required super.name,
+    required super.nameBn,
+    required super.fatherName,
+    required super.motherName,
+    required super.gender,
+    required super.permanentAddress,
+    required super.mailingAddress,
+    required super.mobile,
+    required super.email,
+    required super.emergencyContact,
+    required super.bvcRegNo,
+    required super.dateOfBirth,
+    required super.bloodGroup,
+    required super.dvmInstitute,
+    required super.msc,
+    required super.phd,
+    required super.experience,
+    required super.specialization,
+    required super.workType,
+    required super.instituteName,
+    required super.interests,
+    required super.photoUrl,
+    required super.licenseUrl,
+    super.password = '',
+  });
+
+  factory MemberModel.fromJson(Map<String, dynamic> json) {
+    return MemberModel(
+      id: json['id']?.toString() ?? '',
+      name: (json['name'] ?? '').toString().trim(),
+      nameBn: (json['nameBn'] ?? '').toString().trim(),
+      fatherName: (json['fatherName'] ?? '').toString().trim(),
+      motherName: (json['motherName'] ?? '').toString().trim(),
+      gender: (json['gender'] ?? '').toString().trim(),
+      permanentAddress:
+          (json['permanentAddress'] ?? '').toString().trim(),
+      mailingAddress: (json['mailingAddress'] ?? '').toString().trim(),
+      mobile: (json['mobile'] ?? '').toString().trim(),
+      email: (json['email'] ?? '').toString().trim(),
+      emergencyContact:
+          (json['emergencyContact'] ?? '').toString().trim(),
+      bvcRegNo: (json['bvcRegNo'] ?? '').toString().trim(),
+      dateOfBirth: (json['dateOfBirth'] ?? '').toString().trim(),
+      bloodGroup: (json['bloodGroup'] ?? '').toString().trim(),
+      dvmInstitute: (json['dvmInstitute'] ?? '').toString().trim(),
+      msc: (json['msc'] ?? '').toString().trim(),
+      phd: (json['phd'] ?? '').toString().trim(),
+      experience: (json['experience'] ?? '').toString().trim(),
+      specialization:
+          (json['specialization'] ?? '').toString().trim(),
+      workType: (json['workType'] ?? '').toString().trim(),
+      instituteName: (json['instituteName'] ?? '').toString().trim(),
+      interests: (json['interests'] ?? '').toString().trim(),
+      photoUrl: (json['photoUrl'] ?? '').toString().trim(),
+      licenseUrl: (json['licenseUrl'] ?? '').toString().trim(),
+      password: (json['password'] ?? '').toString(),
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'nameBn': nameBn,
+        'fatherName': fatherName,
+        'motherName': motherName,
+        'gender': gender,
+        'permanentAddress': permanentAddress,
+        'mailingAddress': mailingAddress,
+        'mobile': mobile,
+        'email': email,
+        'emergencyContact': emergencyContact,
+        'bvcRegNo': bvcRegNo,
+        'dateOfBirth': dateOfBirth,
+        'bloodGroup': bloodGroup,
+        'dvmInstitute': dvmInstitute,
+        'msc': msc,
+        'phd': phd,
+        'experience': experience,
+        'specialization': specialization,
+        'workType': workType,
+        'instituteName': instituteName,
+        'interests': interests,
+        'photoUrl': photoUrl,
+        'licenseUrl': licenseUrl,
+        'password': password,
+      };
+}

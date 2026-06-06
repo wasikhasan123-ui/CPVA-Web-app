@@ -1,0 +1,54 @@
+{
+  "events": [
+    {
+      "id": "e1",
+      "title": "Annual Scientific Conference 2026",
+      "date": "2026-08-20",
+      "time": "09:00 - 17:00",
+      "venue": "Hotel Agrabad, Chattogram",
+      "imageUrl": "",
+      "description": "Join us for the Annual Scientific Conference featuring keynote speakers from across the country. Topics: One Health approach, Antimicrobial resistance, Zoonotic diseases, Modern surgery techniques. Registration fee: BDT 2,000 (members), BDT 3,000 (non-members). Lunch and refreshments included.",
+      "isUpcoming": true
+    },
+    {
+      "id": "e2",
+      "title": "Hands-on Workshop: Small Animal Surgery",
+      "date": "2026-07-12",
+      "time": "10:00 - 16:00",
+      "venue": "CVASU, Khulshi",
+      "imageUrl": "",
+      "description": "Practical workshop on small animal surgical techniques. Limited to 30 participants. Led by Dr. Md. Siddiqul Islam and team. Materials will be provided. Registration: BDT 3,500.",
+      "isUpcoming": true
+    },
+    {
+      "id": "e3",
+      "title": "CPD: Poultry Disease Management",
+      "date": "2026-07-05",
+      "time": "14:00 - 17:00",
+      "venue": "CPVA Hall, Chattogram",
+      "imageUrl": "",
+      "description": "Continuing Professional Development session on poultry disease management in commercial farms. Free for CPVA members. 3 CPD credits.",
+      "isUpcoming": true
+    },
+    {
+      "id": "e4",
+      "title": "World Veterinary Day Celebration",
+      "date": "2026-04-27",
+      "time": "16:00 - 20:00",
+      "venue": "MA Aziz Stadium, Chattogram",
+      "imageUrl": "",
+      "description": "CPVA celebrated World Veterinary Day with a public awareness rally, free pet vaccination camp, and cultural program. Over 200 pets were vaccinated.",
+      "isUpcoming": false
+    },
+    {
+      "id": "e5",
+      "title": "Annual General Meeting 2025",
+      "date": "2025-12-15",
+      "time": "10:00 - 14:00",
+      "venue": "CPVA Hall, Chattogram",
+      "imageUrl": "",
+      "description": "The 2025 AGM was held with 85% member attendance. New executive committee was elected for 2026-2027 term.",
+      "isUpcoming": false
+    }
+  ]
+}
