@@ -318,26 +318,26 @@ class _AdminPanelPageState extends State<AdminPanelPage>
       }
 
       if (!mounted) return;
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => PopScope(
-          canPop: false,
-          child: const Center(
-            child: Card(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 16),
-                    Text('Importing members...'),
-                  ],
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.hideCurrentSnackBar();
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.white),
                 ),
               ),
-            ),
+              SizedBox(width: 12),
+              Text('Importing members...'),
+            ],
           ),
+          backgroundColor: AppColors.info,
+          duration: Duration(minutes: 5),
         ),
       );
 
@@ -348,10 +348,10 @@ class _AdminPanelPageState extends State<AdminPanelPage>
       final imported = await _processCsv(content);
 
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+        messenger.hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully imported $imported member(s)'),
+            content: Text('Successfully imported $imported members'),
             backgroundColor: AppColors.success,
           ),
         );
@@ -360,7 +360,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
       print('Import error: $e');
       print(st);
       if (mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Import failed: $e'),
@@ -390,7 +390,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
 
     final headerToField = <int, String>{};
     for (int i = 0; i < headers.length; i++) {
-      final field = _mapHeaderToField(headers[i]);
+      final field = _kHeaderToField[headers[i]];
       if (field != null) headerToField[i] = field;
     }
     print('Header to field map: $headerToField');
@@ -405,10 +405,10 @@ class _AdminPanelPageState extends State<AdminPanelPage>
         final values = <String, String>{};
         headerToField.forEach((idx, field) {
           if (idx < cells.length) {
-            values[field] = _cellStr(cells[idx]);
+            values[field] = _safe(cells[idx]);
           }
         });
-        final mobile = _normalizeMobileForImport(values['mobile']);
+        final mobile = _cleanMobile(values['mobile'] ?? '');
         if (mobile.isEmpty || mobile.length < 10) {
           print('Skipping row $i: invalid mobile "${values['mobile']}"');
           continue;
@@ -416,31 +416,31 @@ class _AdminPanelPageState extends State<AdminPanelPage>
 
         final member = MemberModel(
           id: mobile,
-          name: _cellStr(values['name']),
+          name: _safe(values['name']),
           nameBn: '',
-          fatherName: _cellStr(values['fatherName']),
-          motherName: _cellStr(values['motherName']),
-          gender: _cellStr(values['gender']),
-          permanentAddress: _cellStr(values['permanentAddress']),
-          mailingAddress: _cellStr(values['mailingAddress']).isNotEmpty
-              ? _cellStr(values['mailingAddress'])
-              : _cellStr(values['permanentAddress']),
+          fatherName: _safe(values['fatherName']),
+          motherName: _safe(values['motherName']),
+          gender: _safe(values['gender']),
+          permanentAddress: _safe(values['permanentAddress']),
+          mailingAddress: _safe(values['mailingAddress']).isNotEmpty
+              ? _safe(values['mailingAddress'])
+              : _safe(values['permanentAddress']),
           mobile: mobile,
-          email: _cellStr(values['email']),
-          emergencyContact: _cellStr(values['emergencyContact']),
-          bvcRegNo: _cellStr(values['bvcRegNo']),
-          dateOfBirth: _cellStr(values['dateOfBirth']),
-          bloodGroup: _cellStr(values['bloodGroup']),
-          dvmInstitute: _cellStr(values['dvmInstitute']),
-          msc: _cellStr(values['msc']),
-          phd: _cellStr(values['phd']),
-          experience: _cellStr(values['experience']),
-          specialization: _cellStr(values['specialization']),
-          workType: _cellStr(values['workType']),
-          instituteName: _cellStr(values['instituteName']),
-          interests: _cellStr(values['interests']),
-          photoUrl: _cellStr(values['photoUrl']),
-          licenseUrl: _cellStr(values['licenseUrl']),
+          email: _safe(values['email']),
+          emergencyContact: _safe(values['emergencyContact']),
+          bvcRegNo: _safe(values['bvcRegNo']),
+          dateOfBirth: _safe(values['dateOfBirth']),
+          bloodGroup: _safe(values['bloodGroup']),
+          dvmInstitute: _safe(values['dvmInstitute']),
+          msc: _safe(values['msc']),
+          phd: _safe(values['phd']),
+          experience: _safe(values['experience']),
+          specialization: _safe(values['specialization']),
+          workType: _safe(values['workType']),
+          instituteName: _safe(values['instituteName']),
+          interests: _safe(values['interests']),
+          photoUrl: _safe(values['photoUrl']),
+          licenseUrl: _safe(values['licenseUrl']),
         );
         await dataSource.saveMember(member);
         imported++;
@@ -452,52 +452,51 @@ class _AdminPanelPageState extends State<AdminPanelPage>
     return imported;
   }
 
-  String _cellStr(dynamic v) {
-    if (v == null) return '';
-    return v.toString().trim();
+  String _safe(dynamic val) {
+    if (val == null) return '';
+    final s = val.toString().trim();
+    if (s == 'null' || s == 'nan' || s == 'NaN') return '';
+    return s;
   }
 
-  String? _mapHeaderToField(String h) {
-    final low = h.trim().toLowerCase();
-    if (low == 'name') return 'name';
-    if (low.contains('father') || low.contains('husband')) return 'fatherName';
-    if (low.contains('mother')) return 'motherName';
-    if (low == 'gender') return 'gender';
-    if (low.contains('permanent')) return 'permanentAddress';
-    if (low.contains('mailing')) return 'mailingAddress';
-    if (low.contains('mobile')) return 'mobile';
-    if (low == 'email') return 'email';
-    if (low.contains('emergency')) return 'emergencyContact';
-    if (low.contains('bvc reg') || low.contains('bvc.reg')) return 'bvcRegNo';
-    if (low.contains('date of birth') || low.contains('dob')) {
-      return 'dateOfBirth';
+  String _cleanMobile(String raw) {
+    String v = raw.trim().replaceAll(RegExp(r'[^\d+]'), '');
+    if (v.startsWith('+880')) {
+      v = '0${v.substring(4)}';
+    } else if (v.startsWith('880') && v.length > 10) {
+      v = '0${v.substring(3)}';
     }
-    if (low.contains('blood')) return 'bloodGroup';
-    if (low.contains('dvm') || low.contains('bsc')) return 'dvmInstitute';
-    if (low.contains('msc')) return 'msc';
-    if (low.contains('phd')) return 'phd';
-    if (low.contains('experience')) return 'experience';
-    if (low.contains('specialization')) return 'specialization';
-    if (low == 'work' || low.contains('work type')) return 'workType';
-    if (low == 'institute name' || low == 'institute') return 'instituteName';
-    if (low.contains('game') || low.contains('interest')) return 'interests';
-    if (low.contains('passport') ||
-        low.contains('picture') ||
-        low.contains('photo')) {
-      return 'photoUrl';
+    v = v.replaceAll(RegExp(r'[^\d]'), '');
+    if (v.length == 10 && !v.startsWith('0')) {
+      v = '0$v';
     }
-    if (low.contains('licence') || low.contains('license')) return 'licenseUrl';
-    return null;
+    return v;
   }
 
-  String _normalizeMobileForImport(dynamic input) {
-    if (input == null) return '';
-    var digits = input.toString().replaceAll(RegExp(r'[^\d]'), '');
-    if (digits.length == 10) {
-      digits = '0$digits';
-    }
-    return digits;
-  }
+  static const Map<String, String> _kHeaderToField = {
+    'name': 'name',
+    'father\'s name/husband\'s name': 'fatherName',
+    'mother\'s name': 'motherName',
+    'gender': 'gender',
+    'permanent address': 'permanentAddress',
+    'mailing address': 'mailingAddress',
+    'mobile number': 'mobile',
+    'email': 'email',
+    'emergency contact number(any of family member)': 'emergencyContact',
+    'bvc reg. no': 'bvcRegNo',
+    'date of birth': 'dateOfBirth',
+    'blood group': 'bloodGroup',
+    'dvm/bsc. vet. sci. & ah: institute name': 'dvmInstitute',
+    'msc.: subject & institute name': 'msc',
+    'phd : institute name': 'phd',
+    'experience (years)': 'experience',
+    'specialization (limited to tow)': 'specialization',
+    'work': 'workType',
+    'institute name': 'instituteName',
+    'game(interest)': 'interests',
+    'passport size picture': 'photoUrl',
+    'bvc licences copy': 'licenseUrl',
+  };
 
   List<String> _parseCsvLine(String line) {
     final result = <String>[];
