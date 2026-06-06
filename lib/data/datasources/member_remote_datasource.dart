@@ -35,6 +35,24 @@ class MemberRemoteDataSource {
     return _base!;
   }
 
+  String _cleanMobileKey(String value) {
+    var v = value.trim().replaceAll(RegExp(r'[^\d+]'), '');
+
+    if (v.startsWith('+880')) {
+      v = '0${v.substring(4)}';
+    } else if (v.startsWith('880') && v.length > 10) {
+      v = '0${v.substring(3)}';
+    }
+
+    v = v.replaceAll(RegExp(r'[^\d]'), '');
+
+    if (v.length == 10 && !v.startsWith('0')) {
+      v = '0$v';
+    }
+
+    return v;
+  }
+
   Future<List<MemberModel>> _loadOverrides() async {
     if (_overrides != null) return _overrides!;
     final prefs = await SharedPreferences.getInstance();
@@ -73,22 +91,71 @@ class MemberRemoteDataSource {
 
   Future<bool> _ensureSeeded() async {
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_kSeeded) == true) return true;
+
     if (!kIsWeb) {
-      prefs.setBool(_kSeeded, true);
-      return false;
-    }
-    final existing = await _firestore.getCollection(_collection);
-    if (existing.isNotEmpty) {
       await prefs.setBool(_kSeeded, true);
       return false;
     }
+
     final base = await _loadBase();
-    for (final m in base) {
-      await _firestore.setDocument(_collection, m.id, m.toJson());
+
+    List<Map<String, dynamic>> remote = [];
+    try {
+      remote = await _firestore.getCollection(_collection);
+    } catch (e) {
+      // If Firestore read fails, do not block local fallback.
+      return false;
     }
+
+    final existingKeys = <String>{};
+
+    for (final doc in remote) {
+      final id = (doc['id'] ?? '').toString();
+      final mobile = (doc['mobile'] ?? '').toString();
+
+      final cleanId = _cleanMobileKey(id);
+      final cleanMobile = _cleanMobileKey(mobile);
+
+      if (id.isNotEmpty) existingKeys.add(id);
+      if (cleanId.isNotEmpty) existingKeys.add(cleanId);
+      if (cleanMobile.isNotEmpty) existingKeys.add(cleanMobile);
+    }
+
+    var wroteAny = false;
+
+    for (final member in base) {
+      final memberId = member.id;
+      final memberIdClean = _cleanMobileKey(member.id);
+      final memberMobileClean = _cleanMobileKey(member.mobile);
+
+      final alreadyExists =
+          existingKeys.contains(memberId) ||
+          existingKeys.contains(memberIdClean) ||
+          existingKeys.contains(memberMobileClean);
+
+      if (alreadyExists) {
+        continue;
+      }
+
+      try {
+        await _firestore.setDocument(
+          _collection,
+          member.id,
+          member.toJson(),
+        );
+
+        if (memberId.isNotEmpty) existingKeys.add(memberId);
+        if (memberIdClean.isNotEmpty) existingKeys.add(memberIdClean);
+        if (memberMobileClean.isNotEmpty) existingKeys.add(memberMobileClean);
+
+        wroteAny = true;
+      } catch (e) {
+        // Continue trying other members.
+      }
+    }
+
     await prefs.setBool(_kSeeded, true);
-    return true;
+    return wroteAny;
   }
 
   Future<List<MemberModel>> _allLocal() async {
@@ -115,12 +182,62 @@ class MemberRemoteDataSource {
 
   Future<List<MemberModel>> getAllMembers() async {
     if (!kIsWeb) return _allLocal();
+
     await _ensureSeeded();
-    final remote = await _firestore.getCollection(_collection);
-    if (remote.isEmpty) return _allLocal();
-    return remote
+
+    List<Map<String, dynamic>> remote = [];
+
+    try {
+      remote = await _firestore.getCollection(_collection);
+    } catch (e) {
+      return _allLocal();
+    }
+
+    final base = await _loadBase();
+
+    if (remote.isEmpty) {
+      return base;
+    }
+
+    final result = remote
         .map((d) => MemberModel.fromJson({...d, 'id': d['id'].toString()}))
         .toList();
+
+    // Emergency fallback:
+    // If Firestore is missing original bundled members, mix them in locally
+    // so login can work even before admin restore is used.
+    final existingKeys = <String>{};
+
+    for (final member in result) {
+      final idKey = member.id;
+      final cleanId = _cleanMobileKey(member.id);
+      final cleanMobile = _cleanMobileKey(member.mobile);
+
+      if (idKey.isNotEmpty) existingKeys.add(idKey);
+      if (cleanId.isNotEmpty) existingKeys.add(cleanId);
+      if (cleanMobile.isNotEmpty) existingKeys.add(cleanMobile);
+    }
+
+    for (final member in base) {
+      final memberId = member.id;
+      final cleanId = _cleanMobileKey(member.id);
+      final cleanMobile = _cleanMobileKey(member.mobile);
+
+      final alreadyExists =
+          existingKeys.contains(memberId) ||
+          existingKeys.contains(cleanId) ||
+          existingKeys.contains(cleanMobile);
+
+      if (!alreadyExists) {
+        result.add(member);
+
+        if (memberId.isNotEmpty) existingKeys.add(memberId);
+        if (cleanId.isNotEmpty) existingKeys.add(cleanId);
+        if (cleanMobile.isNotEmpty) existingKeys.add(cleanMobile);
+      }
+    }
+
+    return result;
   }
 
   Stream<List<MemberModel>> streamMembers() {
