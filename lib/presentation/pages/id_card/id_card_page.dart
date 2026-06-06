@@ -1,5 +1,12 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 import '../../../core/constants/cpva_info.dart';
 import '../../../core/di/injection.dart';
@@ -20,7 +27,11 @@ class IdCardPage extends StatefulWidget {
 
 class _IdCardPageState extends State<IdCardPage> {
   final PageController _pageController = PageController();
+  final GlobalKey _frontCardKey = GlobalKey();
+  final GlobalKey _backCardKey = GlobalKey();
+
   int _page = 0;
+  bool _downloading = false;
 
   @override
   void dispose() {
@@ -62,9 +73,21 @@ class _IdCardPageState extends State<IdCardPage> {
                                 onPageChanged: (i) =>
                                     setState(() => _page = i),
                                 children: [
-                                  _FrontSide(
-                                      user: user, executive: exec, cardW: cardW),
-                                  _BackSide(user: user, cardW: cardW),
+                                  RepaintBoundary(
+                                    key: _frontCardKey,
+                                    child: _FrontSide(
+                                      user: user,
+                                      executive: exec,
+                                      cardW: cardW,
+                                    ),
+                                  ),
+                                  RepaintBoundary(
+                                    key: _backCardKey,
+                                    child: _BackSide(
+                                      user: user,
+                                      cardW: cardW,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -106,6 +129,53 @@ class _IdCardPageState extends State<IdCardPage> {
                               color: AppColors.textSecondary,
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: cardW,
+                            child: FilledButton.icon(
+                              onPressed: _downloading
+                                  ? null
+                                  : () => _downloadIdCardPdf(
+                                        user: user,
+                                        executive: exec,
+                                      ),
+                              icon: _downloading
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: AppColors.white,
+                                      ),
+                                    )
+                                  : const Icon(Icons.download),
+                              label: Text(
+                                _downloading
+                                    ? 'Preparing ID Card...'
+                                    : 'Download ID Card',
+                              ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                  horizontal: 18,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Downloads front and back sides as a PDF',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -117,6 +187,181 @@ class _IdCardPageState extends State<IdCardPage> {
         },
       ),
     );
+  }
+
+  Future<void> _downloadIdCardPdf({
+    required MemberEntity user,
+    required ExecutiveMemberModel? executive,
+  }) async {
+    if (_downloading) return;
+
+    setState(() => _downloading = true);
+
+    final originalPage = _page;
+
+    try {
+      // Capture front side.
+      await _pageController.animateToPage(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+      await Future.delayed(const Duration(milliseconds: 500));
+      final frontBytes = await _captureBoundary(_frontCardKey);
+
+      // Capture back side.
+      await _pageController.animateToPage(
+        1,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      );
+      await Future.delayed(const Duration(milliseconds: 500));
+      final backBytes = await _captureBoundary(_backCardKey);
+
+      // Restore the page user was viewing.
+      if (mounted) {
+        await _pageController.animateToPage(
+          originalPage,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+        );
+      }
+
+      final pdfBytes = await _buildIdCardPdf(
+        frontBytes: frontBytes,
+        backBytes: backBytes,
+        user: user,
+        executive: executive,
+      );
+
+      final fileName = _idCardFileName(user);
+
+      await Printing.sharePdf(
+        bytes: pdfBytes,
+        filename: fileName,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Digital ID card is ready to download'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to download ID card: $e'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _downloading = false);
+      }
+    }
+  }
+
+  Future<Uint8List> _captureBoundary(GlobalKey key) async {
+    final context = key.currentContext;
+    if (context == null) {
+      throw Exception('ID card is not ready yet. Please try again.');
+    }
+
+    final boundary = context.findRenderObject() as RenderRepaintBoundary?;
+
+    if (boundary == null) {
+      throw Exception('Could not capture ID card.');
+    }
+
+    final image = await boundary.toImage(pixelRatio: 3);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+
+    if (byteData == null) {
+      throw Exception('Could not create ID card image.');
+    }
+
+    return byteData.buffer.asUint8List();
+  }
+
+  Future<Uint8List> _buildIdCardPdf({
+    required Uint8List frontBytes,
+    required Uint8List backBytes,
+    required MemberEntity user,
+    required ExecutiveMemberModel? executive,
+  }) async {
+    final doc = pw.Document();
+
+    final frontImage = pw.MemoryImage(frontBytes);
+    final backImage = pw.MemoryImage(backBytes);
+
+    pw.Widget buildPage(pw.ImageProvider image, String title) {
+      return pw.Container(
+        width: double.infinity,
+        height: double.infinity,
+        padding: const pw.EdgeInsets.all(24),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            pw.Text(
+              title,
+              style: pw.TextStyle(
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+            pw.SizedBox(height: 12),
+            pw.Expanded(
+              child: pw.Center(
+                child: pw.Image(
+                  image,
+                  fit: pw.BoxFit.contain,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: pw.EdgeInsets.zero,
+        build: (_) => buildPage(frontImage, 'CPVA Digital ID Card - Front'),
+      ),
+    );
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4.landscape,
+        margin: pw.EdgeInsets.zero,
+        build: (_) => buildPage(backImage, 'CPVA Digital ID Card - Back'),
+      ),
+    );
+
+    return doc.save();
+  }
+
+  String _idCardFileName(MemberEntity user) {
+    final cleanName = user.name
+        .trim()
+        .replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+
+    final cleanMobile = user.mobileClean.isNotEmpty
+        ? user.mobileClean
+        : user.mobile.replaceAll(RegExp(r'[^\d]'), '');
+
+    final namePart = cleanName.isNotEmpty ? cleanName : 'member';
+    final mobilePart = cleanMobile.isNotEmpty ? '_$cleanMobile' : '';
+
+    return 'CPVA_ID_$namePart$mobilePart.pdf';
   }
 
   Future<ExecutiveMemberModel?> _lookupExecutive(MemberEntity user) async {
