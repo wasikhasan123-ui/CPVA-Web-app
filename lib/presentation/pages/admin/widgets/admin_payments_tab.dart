@@ -195,6 +195,15 @@ class _PaymentCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (payment.status != 'pending')
+                  OutlinedButton.icon(
+                    onPressed: () => _delete(context),
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                    ),
+                  ),
               ],
             ),
           ],
@@ -349,6 +358,54 @@ class _PaymentCard extends StatelessWidget {
           backgroundColor: AppColors.error,
         ),
       );
+    }
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Payment Record?'),
+        content: const Text(
+          'This will permanently delete this reviewed payment record.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true) return;
+
+    try {
+      await sl<PaymentRemoteDataSource>().deletePayment(payment.id);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment record deleted'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to delete payment record: $e'),
+            backgroundColor: AppColors.error,
+            duration: const Duration(seconds: 8),
+          ),
+        );
+      }
     }
   }
 
