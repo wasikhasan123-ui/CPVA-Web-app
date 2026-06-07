@@ -78,7 +78,12 @@ ios/Flutter/flutter_export_environment.sh
 *.key
 *.pem
 *.p12
+*.private.json
 serviceAccount.json
+service-account.json
+firebase-service-account.json
+google-service-account.json
+*-service-account.json
 google-services-private.json
 **/google-services.json
 **/GoogleService-Info.plist
