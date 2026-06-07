@@ -27,6 +27,7 @@ class MemberModel extends MemberEntity {
     required super.photoUrl,
     required super.licenseUrl,
     super.password = '',
+    super.authUid = '',
   });
 
   factory MemberModel.fromJson(Map<String, dynamic> json) {
@@ -59,10 +60,10 @@ class MemberModel extends MemberEntity {
       photoUrl: (json['photoUrl'] ?? '').toString().trim(),
       licenseUrl: (json['licenseUrl'] ?? '').toString().trim(),
       password: (json['password'] ?? '').toString(),
+      authUid: (json['authUid'] ?? '').toString(),
     );
   }
 
-  @override
   Map<String, dynamic> toJson() => {
         'id': id,
         'name': name,
@@ -89,5 +90,6 @@ class MemberModel extends MemberEntity {
         'photoUrl': photoUrl,
         'licenseUrl': licenseUrl,
         'password': password,
+        'authUid': authUid,
       };
 }

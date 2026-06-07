@@ -143,7 +143,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Sign in to continue',
+                      'Sign in with your email/mobile and password',
                       style: TextStyle(
                         fontSize: 14,
                         color: AppColors.textSecondary,
@@ -152,29 +152,36 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 24),
                     TextFormField(
                       controller: _mobileController,
-                      keyboardType: TextInputType.phone,
+                      keyboardType: TextInputType.text,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
                       ),
                       decoration: const InputDecoration(
-                        labelText: 'Mobile Number',
-                        prefixIcon: Icon(Icons.phone,
+                        labelText: 'Email or Mobile Number',
+                        prefixIcon: Icon(Icons.person,
                             color: AppColors.primary),
-                        hintText: '01XXXXXXXXX',
+                        hintText: 'email@example.com or 01XXXXXXXXX',
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter your mobile number';
+                          return 'Please enter your email or mobile number';
                         }
-                        if (value.startsWith('+') ||
-                            value.startsWith('880')) {
-                          return 'Use 01XXXXXXXXX format (not +880)';
-                        }
-                        final clean =
-                            value.replaceAll(RegExp(r'[^\d]'), '');
-                        if (clean.length < 11 || !clean.startsWith('01')) {
-                          return 'Please enter a valid 11-digit mobile number';
+                        if (value.contains('@')) {
+                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                              .hasMatch(value.trim())) {
+                            return 'Enter a valid email address';
+                          }
+                        } else {
+                          if (value.startsWith('+') ||
+                              value.startsWith('880')) {
+                            return 'Use 01XXXXXXXXX format (not +880)';
+                          }
+                          final clean =
+                              value.replaceAll(RegExp(r'[^\d]'), '');
+                          if (clean.length < 11 || !clean.startsWith('01')) {
+                            return 'Please enter a valid 11-digit mobile number';
+                          }
                         }
                         return null;
                       },

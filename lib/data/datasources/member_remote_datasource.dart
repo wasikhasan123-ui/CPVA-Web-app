@@ -270,6 +270,19 @@ class MemberRemoteDataSource {
     }
   }
 
+  Future<MemberModel?> findByEmail(String email) async {
+    final cleanEmail = email.trim().toLowerCase();
+    if (cleanEmail.isEmpty) return null;
+    final all = await getAllMembers();
+    try {
+      return all.firstWhere(
+        (m) => m.email.trim().toLowerCase() == cleanEmail,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<MemberModel>> searchMembers(String query) async {
     final all = await getAllMembers();
     final q = query.toLowerCase().trim();
@@ -310,6 +323,7 @@ class MemberRemoteDataSource {
       interests: entity.interests,
       photoUrl: entity.photoUrl,
       licenseUrl: entity.licenseUrl,
+      authUid: entity.authUid,
     );
     if (kIsWeb) {
       await _ensureSeeded();

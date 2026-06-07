@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Members: public read, write requires auth (can tighten to admin-only later)
+    match /members/{docId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Registrations: auth required (user is signed in during registration)
+    match /registrations/{docId} {
+      allow read: if request.auth != null;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // All other collections: auth required
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

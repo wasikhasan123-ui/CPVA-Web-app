@@ -1341,6 +1341,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
         'licenseUrl': '',
         'password': '',
         'joinedAt': DateTime.now().toIso8601String(),
+        'authUid': app.authUid,
       };
       await firestore.setDocument('members', docId, memberData);
     } catch (e) {

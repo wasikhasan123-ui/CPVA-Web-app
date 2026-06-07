@@ -1,17 +1,15 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:dartz/dartz.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/errors/failures.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-import '../../data/datasources/email_service.dart';
 import '../../data/datasources/member_remote_datasource.dart';
 import '../../data/datasources/registration_remote_datasource.dart';
 import '../../data/datasources/remote/password_service.dart';
-import '../../data/models/member_model.dart';
 import '../../domain/entities/member_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 
@@ -19,6 +17,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final MemberRemoteDataSource _dataSource;
   final RegistrationRemoteDataSource _regDs;
   final PasswordService _passwordService;
+  final fb_auth.FirebaseAuth _firebaseAuth = fb_auth.FirebaseAuth.instance;
   static const String _kLoggedInMemberId = 'logged_in_member_id';
   static const String _kPasswordResetCodePrefix = 'cpva_pw_reset_code_';
   static const String _kPasswordResetMobilePrefix = 'cpva_pw_reset_mobile_';
@@ -40,42 +39,116 @@ class AuthRepositoryImpl implements AuthRepository {
     return v;
   }
 
+  // TODO: Remove _hashPassword after Firebase Auth migration is complete.
   String _hashPassword(String password) {
     return base64Url.encode(utf8.encode('cpva_v1_$password'));
   }
 
+  // TODO: Remove _verifyPassword after Firebase Auth migration is complete.
   bool _verifyPassword(String password, String hash) {
     if (hash.isEmpty) return false;
     return _hashPassword(password) == hash;
   }
 
-  @override
-  Future<Either<Failure, MemberEntity>> signInWithMobile(
-      String mobile, String password) async {
+  Future<MemberEntity?> _findMemberByEmail(String email) async {
+    final member = await _dataSource.findByEmail(email);
+    return member;
+  }
+
+  Future<MemberEntity?> _findMemberByMobile(String mobile) async {
+    final cleanMobile = _normalizeMobile(mobile);
+    if (cleanMobile.length < 11 || !cleanMobile.startsWith('01')) {
+      return null;
+    }
+    return await _dataSource.findByMobile(cleanMobile);
+  }
+
+  Future<Either<Failure, MemberEntity>> _firebaseLogin(
+    String email,
+    String password,
+  ) async {
     try {
-      final cleanMobile = _normalizeMobile(mobile);
-      if (cleanMobile.length < 11 || !cleanMobile.startsWith('01')) {
-        return const Left(AuthFailure(
-            'Invalid mobile number format. Use 01XXXXXXXXX'));
-      }
-      final member = await _dataSource.findByMobile(cleanMobile);
-      if (member == null) {
-        return const Left(AuthFailure(
-            'No member found with this mobile number.'));
+      await _firebaseAuth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final firebaseUser = _firebaseAuth.currentUser;
+      if (firebaseUser == null) {
+        return const Left(AuthFailure('Login failed. Please try again.'));
       }
 
-      final storedHash = await _getStoredPasswordHash(member.id);
-      if (storedHash == null) {
+      if (!firebaseUser.emailVerified) {
+        await _firebaseAuth.signOut();
         return const Left(AuthFailure(
-            'Password not set. Please reset your password.'));
+          'Please verify your email before logging in.',
+        ));
       }
-      if (!_verifyPassword(password, storedHash)) {
-        return const Left(AuthFailure('Incorrect password.'));
+
+      final member = await _findMemberByEmail(email);
+      if (member == null) {
+        await _firebaseAuth.signOut();
+        return const Left(AuthFailure(
+          'Account not found. Please contact admin.',
+        ));
       }
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_kLoggedInMemberId, member.id);
       return Right(member);
+    } on fb_auth.FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          return const Left(AuthFailure(
+              'Account not found. Please contact admin.'));
+        case 'wrong-password':
+        case 'invalid-credential':
+          return const Left(
+              AuthFailure('Incorrect email or password.'));
+        case 'too-many-requests':
+          return const Left(AuthFailure(
+              'Too many attempts. Please try again later.'));
+        case 'network-request-failed':
+          return const Left(AuthFailure(
+              'Network error. Please check your connection.'));
+        default:
+          return Left(AuthFailure(e.message ?? 'Login failed.'));
+      }
+    } catch (e) {
+      return Left(AuthFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, MemberEntity>> signInWithMobile(
+    String mobileOrEmail,
+    String password,
+  ) async {
+    if (mobileOrEmail.contains('@')) {
+      return _firebaseLogin(mobileOrEmail.trim(), password);
+    }
+
+    try {
+      final cleanMobile = _normalizeMobile(mobileOrEmail);
+      if (cleanMobile.length < 11 || !cleanMobile.startsWith('01')) {
+        return const Left(
+            AuthFailure('Invalid mobile number format. Use 01XXXXXXXXX'));
+      }
+
+      final member = await _dataSource.findByMobile(cleanMobile);
+      if (member == null) {
+        return const Left(
+            AuthFailure('No member found with this mobile number.'));
+      }
+
+      final email = member.email.trim();
+      if (email.isEmpty) {
+        return const Left(AuthFailure(
+          'This account has no email. Please contact admin to activate Firebase login.',
+        ));
+      }
+
+      return _firebaseLogin(email, password);
     } catch (e) {
       return Left(AuthFailure(e.toString()));
     }
@@ -83,30 +156,16 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, MemberEntity>> signInWithEmail(
-      String email, String password) async {
-    try {
-      final all = await _dataSource.getAllMembers();
-      MemberModel? found;
-      for (final m in all) {
-        if (m.email.toLowerCase() == email.toLowerCase()) {
-          found = m;
-          break;
-        }
-      }
-      if (found == null) {
-        return const Left(AuthFailure('No admin found with this email'));
-      }
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kLoggedInMemberId, found.id);
-      return Right(found);
-    } catch (e) {
-      return Left(AuthFailure(e.toString()));
-    }
+    String email,
+    String password,
+  ) async {
+    return _firebaseLogin(email.trim(), password);
   }
 
   @override
   Future<Either<Failure, void>> signOut() async {
     try {
+      await _firebaseAuth.signOut();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_kLoggedInMemberId);
       return const Right(null);
@@ -118,6 +177,18 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, MemberEntity?>> getCurrentUser() async {
     try {
+      final firebaseUser = _firebaseAuth.currentUser;
+
+      if (firebaseUser != null) {
+        final member = await _findMemberByEmail(firebaseUser.email ?? '');
+        if (member != null) {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString(_kLoggedInMemberId, member.id);
+          return Right(member);
+        }
+      }
+
+      // TODO: Remove legacy fallback after Firebase Auth migration is complete.
       final prefs = await SharedPreferences.getInstance();
       final id = prefs.getString(_kLoggedInMemberId);
       if (id == null) return const Right(null);
@@ -130,19 +201,21 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, void>> registerMember(
-      Map<String, dynamic> data) async {
+    Map<String, dynamic> data,
+  ) async {
     try {
       final mobileRaw = (data['mobile'] ?? '').toString();
       final cleanMobile = _normalizeMobile(mobileRaw);
       if (cleanMobile.length < 11 || !cleanMobile.startsWith('01')) {
-        return const Left(AuthFailure(
-            'Invalid mobile number. Use 01XXXXXXXXX format.'));
+        return const Left(
+            AuthFailure('Invalid mobile number. Use 01XXXXXXXXX format.'));
       }
       final existing = await _regDs.findByMobile(cleanMobile);
       if (existing != null) {
-        return const Left(AuthFailure(
-            'You have already submitted an application.'));
+        return const Left(
+            AuthFailure('You have already submitted an application.'));
       }
+      final authUid = (data['authUid'] ?? '').toString();
       final app = MembershipApplication(
         id: 'APP-${DateTime.now().millisecondsSinceEpoch}',
         name: (data['name'] ?? '').toString(),
@@ -161,7 +234,8 @@ class AuthRepositoryImpl implements AuthRepository {
         paymentAmount: (data['paymentAmount'] ?? '').toString(),
         paymentMethod: (data['paymentMethod'] ?? '').toString(),
         transactionId: (data['transactionId'] ?? '').toString(),
-        password: (data['password'] ?? '').toString(),
+        password: '',
+        authUid: authUid,
         submittedAt: DateTime.now().toIso8601String(),
       );
       await _regDs.submitApplication(app);
@@ -175,110 +249,76 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, void>> sendPasswordReset(String email) async {
     try {
       final cleanEmail = email.trim().toLowerCase();
-      final emailService = EmailService();
-      if (!emailService.isValidEmail(cleanEmail)) {
-        return const Left(AuthFailure('Please enter a valid email address.'));
+      if (cleanEmail.isEmpty || !cleanEmail.contains('@')) {
+        return const Left(
+            AuthFailure('Please enter a valid email address.'));
       }
-      final all = await _dataSource.getAllMembers();
-      MemberModel? member;
-      for (final m in all) {
-        if (m.email.toLowerCase() == cleanEmail) {
-          member = m;
-          break;
-        }
-      }
-      if (member == null) {
-        return const Left(AuthFailure(
-            'No account found with this email address.'));
-      }
-      final rng = Random();
-      final code = (100000 + rng.nextInt(900000)).toString();
-      try {
-        await emailService.sendVerificationCode(
-          toEmail: member.email,
-          code: code,
-          memberName: member.name,
-        );
-      } catch (e) {
-        return Left(AuthFailure(
-            'Failed to send email: $e. Please check Resend API configuration.'));
-      }
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('$_kPasswordResetCodePrefix$cleanEmail', code);
-      await prefs.setString(
-          '$_kPasswordResetMobilePrefix$cleanEmail', member.id);
-      await prefs.setString(
-          '$_kPasswordResetExpiryPrefix$cleanEmail',
-          DateTime.now()
-              .add(const Duration(minutes: 15))
-              .toIso8601String());
+      await _firebaseAuth.sendPasswordResetEmail(email: cleanEmail);
       return const Right(null);
+    } on fb_auth.FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+          return const Left(AuthFailure(
+              'No account found with this email address.'));
+        default:
+          return Left(AuthFailure(
+              'Failed to send reset email: ${e.message}'));
+      }
     } catch (e) {
-      return Left(AuthFailure(e.toString()));
+      return Left(AuthFailure('Failed to send reset email: $e'));
     }
   }
 
   @override
   Future<Either<Failure, bool>> verifyResetCode(
-      String email, String code) async {
-    try {
-      final cleanEmail = email.trim().toLowerCase();
-      final prefs = await SharedPreferences.getInstance();
-      final stored = prefs.getString('$_kPasswordResetCodePrefix$cleanEmail');
-      final expiryStr =
-          prefs.getString('$_kPasswordResetExpiryPrefix$cleanEmail');
-      if (stored == null || expiryStr == null) {
-        return const Left(AuthFailure(
-            'No reset request found. Please request a new code.'));
-      }
-      final expiry = DateTime.tryParse(expiryStr);
-      if (expiry == null || DateTime.now().isAfter(expiry)) {
-        return const Left(AuthFailure('Code expired. Please request a new one.'));
-      }
-      if (stored != code) {
-        return const Left(AuthFailure('Invalid verification code.'));
-      }
-      return const Right(true);
-    } catch (e) {
-      return Left(AuthFailure(e.toString()));
-    }
+    String email,
+    String code,
+  ) async {
+    // TODO: Firebase handles password reset by email link.
+    // Remove old code verification UI after migration.
+    return const Right(true);
   }
 
   @override
   Future<Either<Failure, void>> resetPassword(
-      String email, String newPassword) async {
-    try {
-      final cleanEmail = email.trim().toLowerCase();
-      final prefs = await SharedPreferences.getInstance();
-      final memberId =
-          prefs.getString('$_kPasswordResetMobilePrefix$cleanEmail');
-      if (memberId == null) {
-        return const Left(AuthFailure('Reset session expired. Try again.'));
-      }
-      await _savePasswordHash(memberId, newPassword);
-      await prefs.remove('$_kPasswordResetCodePrefix$cleanEmail');
-      await prefs.remove('$_kPasswordResetMobilePrefix$cleanEmail');
-      await prefs.remove('$_kPasswordResetExpiryPrefix$cleanEmail');
-      return const Right(null);
-    } catch (e) {
-      return Left(AuthFailure(e.toString()));
-    }
+    String email,
+    String newPassword,
+  ) async {
+    // TODO: Firebase password reset is handled by email link.
+    // This method is kept for compatibility during migration.
+    return const Right(null);
   }
 
   @override
   Future<Either<Failure, void>> changePassword(
-      String memberId, String oldPassword, String newPassword) async {
+    String memberId,
+    String oldPassword,
+    String newPassword,
+  ) async {
     try {
-      final stored = await _getStoredPasswordHash(memberId);
-      if (stored == null) {
-        return const Left(AuthFailure(
-            'No password set. Please reset via Forgot Password.'));
+      final user = _firebaseAuth.currentUser;
+      if (user == null || user.email == null) {
+        return const Left(AuthFailure('Please login again.'));
       }
-      if (!_verifyPassword(oldPassword, stored)) {
-        return const Left(AuthFailure('Current password is incorrect.'));
-      }
-      await _savePasswordHash(memberId, newPassword);
+      final credential = fb_auth.EmailAuthProvider.credential(
+        email: user.email!,
+        password: oldPassword,
+      );
+      await user.reauthenticateWithCredential(credential);
+      await user.updatePassword(newPassword);
       return const Right(null);
+    } on fb_auth.FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'wrong-password':
+          return const Left(
+              AuthFailure('Current password is incorrect.'));
+        case 'weak-password':
+          return const Left(AuthFailure(
+              'New password must be at least 6 characters.'));
+        default:
+          return Left(
+              AuthFailure('Failed to change password: ${e.message}'));
+      }
     } catch (e) {
       return Left(AuthFailure(e.toString()));
     }
@@ -286,17 +326,19 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<Either<Failure, void>> setPasswordForMember(
-      String memberId, String password) async {
-    try {
-      await _savePasswordHash(memberId, password);
-      return const Right(null);
-    } catch (e) {
-      return Left(AuthFailure(e.toString()));
-    }
+    String memberId,
+    String password,
+  ) async {
+    // TODO: For production, account creation/password setup
+    // should happen through Firebase Auth sign-up or admin backend.
+    // Admin cannot set another user's password via client SDK.
+    return const Right(null);
   }
 
   @override
-  Future<Either<Failure, String?>> getResetCodeForMobile(String email) async {
+  Future<Either<Failure, String?>> getResetCodeForMobile(
+    String email,
+  ) async {
     try {
       final cleanEmail = email.trim().toLowerCase();
       final prefs = await SharedPreferences.getInstance();

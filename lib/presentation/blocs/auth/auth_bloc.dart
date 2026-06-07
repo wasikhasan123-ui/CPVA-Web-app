@@ -100,17 +100,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       PasswordResetRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
     final result = await _authRepository.sendPasswordReset(event.email);
-    await result.fold(
-      (failure) async => emit(AuthError(failure.message)),
-      (_) async {
-        final codeResult =
-            await _authRepository.getResetCodeForMobile(event.email);
-        final code = codeResult.getOrElse(() => null) ?? '';
-        emit(AuthPasswordResetCodeSent(
-          email: event.email,
-          devCode: code,
-        ));
-      },
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(AuthPasswordResetCodeSent(
+        email: event.email,
+        devCode: '',
+      )),
     );
   }
 

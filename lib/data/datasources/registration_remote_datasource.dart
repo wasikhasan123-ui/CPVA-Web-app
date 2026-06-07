@@ -24,6 +24,7 @@ class MembershipApplication {
   final String paymentMethod;
   final String transactionId;
   final String password;
+  final String authUid;
   final String submittedAt;
   String status;
   String? rejectionReason;
@@ -47,6 +48,7 @@ class MembershipApplication {
     this.paymentMethod = '',
     this.transactionId = '',
     this.password = '',
+    this.authUid = '',
     required this.submittedAt,
     this.status = 'pending',
     this.rejectionReason,
@@ -73,6 +75,7 @@ class MembershipApplication {
         'paymentMethod': paymentMethod,
         'transactionId': transactionId,
         'password': password,
+        'authUid': authUid,
         'submittedAt': submittedAt,
         'status': status,
         'rejectionReason': rejectionReason,
@@ -98,6 +101,7 @@ class MembershipApplication {
       paymentMethod: (json['paymentMethod'] ?? '').toString(),
       transactionId: (json['transactionId'] ?? '').toString(),
       password: (json['password'] ?? '').toString(),
+      authUid: (json['authUid'] ?? '').toString(),
       submittedAt: (json['submittedAt'] ?? '').toString(),
       status: (json['status'] ?? 'pending').toString(),
       rejectionReason: json['rejectionReason']?.toString(),

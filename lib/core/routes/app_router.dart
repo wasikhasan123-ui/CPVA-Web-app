@@ -59,6 +59,9 @@ GoRouter buildRouter(AuthBloc authBloc) {
       if (loggedIn && (atLogin || atRegistration || atForgot)) {
         return AppRoutes.shell;
       }
+      if (loc == AppRoutes.adminPanel && loggedIn && !authState.user.isAdmin) {
+        return AppRoutes.shell;
+      }
       return null;
     },
     routes: [

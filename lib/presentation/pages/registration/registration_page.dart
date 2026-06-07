@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -106,6 +107,29 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
     setState(() => _submitting = true);
 
+    String authUid = '';
+    try {
+      final credential =
+          await fb_auth.FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+      authUid = credential.user!.uid;
+      await credential.user!.sendEmailVerification();
+      await fb_auth.FirebaseAuth.instance.signOut();
+    } catch (e) {
+      setState(() => _submitting = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create account: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
     final app = MembershipApplication(
       id: 'APP-${DateTime.now().millisecondsSinceEpoch}',
       name: _nameController.text.trim(),
@@ -124,7 +148,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
       paymentAmount: _paymentAmountController.text.trim(),
       paymentMethod: _paymentMethod,
       transactionId: _transactionIdController.text.trim(),
-      password: _passwordController.text,
+      password: '',
+      authUid: authUid,
       submittedAt: DateTime.now().toIso8601String(),
     );
 
@@ -140,9 +165,9 @@ class _RegistrationPageState extends State<RegistrationPage> {
               const Icon(Icons.check_circle, color: AppColors.success, size: 48),
           title: const Text('Application Submitted!'),
           content: const Text(
-              'Your membership application has been submitted successfully. '
-              'The admin will review your payment and details. '
-              'You will be able to login once approved.'),
+            'Registration submitted. Please verify your email. '
+            'Admin will approve your application.',
+          ),
           actions: [
             ElevatedButton(
               onPressed: () {
@@ -211,8 +236,8 @@ class _RegistrationPageState extends State<RegistrationPage> {
                   _reqPhone,
                   keyboard: TextInputType.phone),
               const SizedBox(height: 12),
-              _field(_emailController, 'Email (optional)', Icons.email_outlined,
-                  null,
+              _field(_emailController, 'Email *', Icons.email_outlined,
+                  _reqEmail,
                   keyboard: TextInputType.emailAddress),
               const SizedBox(height: 12),
               _buildPasswordField(
@@ -374,6 +399,15 @@ class _RegistrationPageState extends State<RegistrationPage> {
   String? _reqPassword(String? v) {
     if (v == null || v.isEmpty) return 'Password is required';
     if (v.length < 6) return 'Password must be at least 6 characters';
+    return null;
+  }
+
+  String? _reqEmail(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Email is required';
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+        .hasMatch(v.trim())) {
+      return 'Enter a valid email address';
+    }
     return null;
   }
 

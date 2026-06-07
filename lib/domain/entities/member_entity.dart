@@ -26,6 +26,7 @@ class MemberEntity extends Equatable {
   final String photoUrl;
   final String licenseUrl;
   final String password;
+  final String authUid;
 
   const MemberEntity({
     required this.id,
@@ -53,6 +54,7 @@ class MemberEntity extends Equatable {
     this.photoUrl = '',
     this.licenseUrl = '',
     this.password = '',
+    this.authUid = '',
   });
 
   String get memberId => 'CPVA-$bvcRegNo';
