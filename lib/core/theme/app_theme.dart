@@ -67,6 +67,7 @@ class AppTheme {
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
         elevation: 0,
+        scrolledUnderElevation: 1,
         centerTitle: true,
         titleTextStyle: GoogleFonts.poppins(
           fontSize: 18,
@@ -76,6 +77,22 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          elevation: 1,
+          shadowColor: AppColors.primary.withValues(alpha: 0.3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: GoogleFonts.poppins(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
@@ -96,6 +113,10 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          textStyle: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -109,7 +130,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.white,
+        fillColor: AppColors.softGreen,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
@@ -128,16 +149,21 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.error),
         ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.error, width: 2),
+        ),
         labelStyle: GoogleFonts.poppins(color: AppColors.textSecondary),
         hintStyle: GoogleFonts.poppins(color: AppColors.textHint),
       ),
       cardTheme: CardThemeData(
         color: AppColors.card,
-        elevation: 2,
+        elevation: 1,
         shadowColor: Colors.black12,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.white,
@@ -145,6 +171,7 @@ class AppTheme {
         unselectedItemColor: AppColors.textHint,
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
+        elevation: 8,
       ),
       dividerTheme: const DividerThemeData(
         color: AppColors.divider,
@@ -154,6 +181,47 @@ class AppTheme {
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
+        elevation: 4,
+        shape: CircleBorder(),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.deepNavy,
+        contentTextStyle: GoogleFonts.poppins(
+          fontSize: 14,
+          color: AppColors.white,
+        ),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: AppColors.white,
+        unselectedLabelColor: AppColors.white.withValues(alpha: 0.7),
+        indicatorColor: AppColors.white,
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelStyle: GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        unselectedLabelStyle: GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        titleTextStyle: GoogleFonts.poppins(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.primary,
+        linearTrackColor: AppColors.softGreen,
       ),
     );
   }
