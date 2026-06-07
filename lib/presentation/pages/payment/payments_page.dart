@@ -78,9 +78,9 @@ class _PaymentsPageState extends State<PaymentsPage> {
               ),
             ),
             const SizedBox(height: 12),
-            _buildPaymentMethod('bKash', '01XXXXXXXXX', Colors.pink),
-            _buildPaymentMethod('Nagad', '01XXXXXXXXX', Colors.orange),
-            _buildPaymentMethod('Rocket', '01XXXXXXXXX', Colors.purple),
+            _buildPaymentMethod('bKash', '01813059794', Colors.pink),
+            _buildPaymentMethod('Nagad', '01813059794', Colors.orange),
+            _buildPaymentMethod('Rocket', '01813059794', Colors.purple),
             if (_selectedMethod != null) ...[
               const SizedBox(height: 16),
               const Text(

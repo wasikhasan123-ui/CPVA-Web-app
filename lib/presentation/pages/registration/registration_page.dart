@@ -359,7 +359,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
                     Expanded(
                       child: Text(
                         'Send BDT ${_paymentAmountController.text.isEmpty ? "2000" : _paymentAmountController.text} '
-                        'to bKash/Nagad/Rocket and enter the Transaction ID above.',
+                        'to 01813059794 via bKash/Nagad/Rocket and enter the Transaction ID above.',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.blue.shade700,
