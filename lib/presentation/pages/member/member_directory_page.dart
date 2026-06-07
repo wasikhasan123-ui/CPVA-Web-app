@@ -11,6 +11,198 @@ import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/member/member_bloc.dart';
 import '../../widgets/member_avatar.dart';
 
+class _MemberCard extends StatelessWidget {
+  final MemberEntity member;
+  final bool isAdmin;
+  final VoidCallback onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final VoidCallback? onResetPassword;
+
+  const _MemberCard({
+    required this.member,
+    required this.isAdmin,
+    required this.onTap,
+    this.onEdit,
+    this.onDelete,
+    this.onResetPassword,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primary.withValues(alpha: 0.04),
+                AppColors.primary.withValues(alpha: 0.01),
+              ],
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              MemberAvatar(
+                memberId: member.id,
+                photoUrl: member.photoUrl.isNotEmpty ? member.photoUrl : null,
+                initials: member.initials,
+                radius: 28,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      member.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      member.memberId,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (member.specialization.isNotEmpty)
+                          _buildInfoChip(
+                            Icons.medical_information_outlined,
+                            member.specialization,
+                          ),
+                        if (member.instituteName.isNotEmpty)
+                          _buildInfoChip(
+                            Icons.business_outlined,
+                            member.instituteName,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                children: [
+                  if (isAdmin) ...[
+                    SizedBox(
+                      height: 32,
+                      child: PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.more_vert, size: 18,
+                            color: AppColors.textSecondary),
+                        onSelected: (value) {
+                          switch (value) {
+                            case 'reset':
+                              onResetPassword?.call();
+                            case 'edit':
+                              onEdit?.call();
+                            case 'delete':
+                              onDelete?.call();
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'reset',
+                            child: ListTile(
+                              leading: Icon(Icons.key, size: 18,
+                                  color: Colors.orange),
+                              title: Text('Reset Password',
+                                  style: TextStyle(fontSize: 13)),
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: ListTile(
+                              leading: Icon(Icons.edit, size: 18),
+                              title: Text('Edit',
+                                  style: TextStyle(fontSize: 13)),
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: ListTile(
+                              leading: Icon(Icons.delete, size: 18,
+                                  color: AppColors.error),
+                              title: Text('Delete',
+                                  style: TextStyle(fontSize: 13,
+                                      color: AppColors.error)),
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 4),
+                  const Icon(Icons.chevron_right, size: 18,
+                      color: AppColors.textHint),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.softGreen.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: AppColors.primary),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w500,
+              color: AppColors.primaryDark,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class MemberDirectoryPage extends StatefulWidget {
   const MemberDirectoryPage({super.key});
 
@@ -37,15 +229,6 @@ class _MemberDirectoryPageState extends State<MemberDirectoryPage> {
     sl<MemberRemoteDataSource>()
         .getAllMembers()
         .then((_) => context.read<MemberBloc>().add(const LoadMembers()));
-  }
-
-  Widget _buildAvatar(MemberEntity member) {
-    return MemberAvatar(
-      memberId: member.id,
-      photoUrl: member.photoUrl.isNotEmpty ? member.photoUrl : null,
-      initials: member.initials,
-      radius: 25,
-    );
   }
 
   @override
@@ -137,67 +320,22 @@ class _MemberDirectoryPageState extends State<MemberDirectoryPage> {
                     itemCount: state.members.length,
                     itemBuilder: (context, index) {
                       final member = state.members[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.all(12),
-                          leading: _buildAvatar(member),
-                          title: Text(
-                            member.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 4),
-                              Text(member.memberId),
-                              if (member.specialization.isNotEmpty)
-                                Text(
-                                  member.specialization,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                            ],
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (isAdmin) ...[
-                                IconButton(
-                                  icon: const Icon(Icons.key, size: 18,
-                                      color: Colors.orange),
-                                  tooltip: 'Reset Password',
-                                  onPressed: () => _resetPassword(member),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.edit, size: 18),
-                                  onPressed: () async {
-                                    final result = await context.push<bool>(
-                                      '/edit-member',
-                                      extra: member,
-                                    );
-                                    if (result == true) _refreshMembers();
-                                  },
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete,
-                                      size: 18,
-                                      color: AppColors.error),
-                                  onPressed: () =>
-                                      _confirmDelete(member),
-                                ),
-                              ],
-                              const Icon(Icons.arrow_forward_ios, size: 14),
-                            ],
-                          ),
-                          onTap: () {
-                            context.push(
-                              '/member-details',
-                              extra: member,
-                            );
-                          },
+                      return _MemberCard(
+                        member: member,
+                        isAdmin: isAdmin,
+                        onTap: () => context.push(
+                          '/member-details',
+                          extra: member,
                         ),
+                        onResetPassword: () => _resetPassword(member),
+                        onEdit: () async {
+                          final result = await context.push<bool>(
+                            '/edit-member',
+                            extra: member,
+                          );
+                          if (result == true) _refreshMembers();
+                        },
+                        onDelete: () => _confirmDelete(member),
                       );
                     },
                   );
