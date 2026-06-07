@@ -225,173 +225,117 @@ class _RegistrationPageState extends State<RegistrationPage> {
         foregroundColor: AppColors.white,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, color: AppColors.primary),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Fill in your details and complete payment. After admin approval '
-                        'you can login with your mobile number.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.primary.withValues(alpha: 0.9),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _infoBanner(),
               const SizedBox(height: 20),
-              _sectionHeader('Personal Information'),
-              const SizedBox(height: 12),
-              _field(_nameController, 'Full Name *', Icons.person_outline, _req),
-              const SizedBox(height: 12),
-              _field(_mobileController, 'Mobile Number *', Icons.phone_outlined,
-                  _reqPhone,
-                  keyboard: TextInputType.phone),
-              const SizedBox(height: 12),
-              _field(_emailController, 'Email *', Icons.email_outlined,
-                  _reqEmail,
-                  keyboard: TextInputType.emailAddress),
-              const SizedBox(height: 12),
-              _buildPasswordField(
-                  _passwordController, 'Password *', _obscurePassword,
-                  () => setState(() => _obscurePassword = !_obscurePassword),
-                  _reqPassword),
-              const SizedBox(height: 12),
-              _buildPasswordField(
-                  _confirmPasswordController,
-                  'Confirm Password *',
-                  _obscureConfirm,
-                  () => setState(() => _obscureConfirm = !_obscureConfirm),
-                  _reqConfirmPassword),
-              const SizedBox(height: 12),
-              _field(_fatherNameController, "Father's Name",
-                  Icons.person_outline, null),
-              const SizedBox(height: 12),
-              _field(_motherNameController, "Mother's Name",
-                  Icons.person_outline, null),
-              const SizedBox(height: 12),
-              _buildGenderDropdown(),
-              const SizedBox(height: 12),
-              _buildBloodGroupDropdown(),
-              const SizedBox(height: 20),
-              _sectionHeader('Membership Payment'),
-              const SizedBox(height: 8),
-              Text(
-                'New Membership Fee: BDT 2,000',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
+              _buildSection('Personal Information', Icons.person_outline, [
+                _field(_nameController, 'Full Name *', Icons.person_outline, _req),
+                const SizedBox(height: 12),
+                _field(_mobileController, 'Mobile Number *', Icons.phone_outlined,
+                    _reqPhone,
+                    keyboard: TextInputType.phone),
+                const SizedBox(height: 12),
+                _field(_emailController, 'Email *', Icons.email_outlined,
+                    _reqEmail,
+                    keyboard: TextInputType.emailAddress),
+                const SizedBox(height: 12),
+                _buildPasswordField(
+                    _passwordController, 'Password *', _obscurePassword,
+                    () => setState(() => _obscurePassword = !_obscurePassword),
+                    _reqPassword),
+                const SizedBox(height: 12),
+                _buildPasswordField(
+                    _confirmPasswordController,
+                    'Confirm Password *',
+                    _obscureConfirm,
+                    () => setState(() => _obscureConfirm = !_obscureConfirm),
+                    _reqConfirmPassword),
+                const SizedBox(height: 12),
+                _field(_fatherNameController, "Father's Name",
+                    Icons.person_outline, null),
+                const SizedBox(height: 12),
+                _field(_motherNameController, "Mother's Name",
+                    Icons.person_outline, null),
+                const SizedBox(height: 12),
+                _buildGenderDropdown(),
+                const SizedBox(height: 12),
+                _buildBloodGroupDropdown(),
+              ]),
+              const SizedBox(height: 16),
+              _buildSection('Professional Information', Icons.school_outlined, [
+                _field(_bvcRegNoController, 'Membership / BVC Reg No *',
+                    Icons.badge_outlined, _req),
+                const SizedBox(height: 12),
+                _field(_dvmInstituteController, 'DVM Institute',
+                    Icons.school_outlined, null),
+                const SizedBox(height: 12),
+                _field(_specializationController, 'Specialization',
+                    Icons.science_outlined, null),
+                const SizedBox(height: 12),
+                _field(_workTypeController, 'Work Type', Icons.work_outline, null),
+                const SizedBox(height: 12),
+                _field(_instituteController, 'Institute / Clinic Name',
+                    Icons.business_outlined, null),
+                const SizedBox(height: 12),
+                _field(_addressController, 'Address', Icons.location_on_outlined,
+                    null,
+                    lines: 2),
+              ]),
+              const SizedBox(height: 16),
+              _buildSection('Membership Payment', Icons.payment_outlined, [
+                Text(
+                  'Membership Fee: BDT 2,000',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              _field(_bvcRegNoController, 'Membership / BVC Reg No *',
-                  Icons.badge_outlined, _req),
-              const SizedBox(height: 20),
-              _sectionHeader('Professional Information'),
-              const SizedBox(height: 12),
-              _field(_dvmInstituteController, 'DVM Institute',
-                  Icons.school_outlined, null),
-              const SizedBox(height: 12),
-              _field(_specializationController, 'Specialization',
-                  Icons.science_outlined, null),
-              const SizedBox(height: 12),
-              _field(_workTypeController, 'Work Type', Icons.work_outline, null),
-              const SizedBox(height: 12),
-              _field(_instituteController, 'Institute / Clinic Name',
-                  Icons.business_outlined, null),
-              const SizedBox(height: 12),
-              _field(_addressController, 'Address', Icons.location_on_outlined,
-                  null,
-                  lines: 2),
-              const SizedBox(height: 24),
-              _sectionHeader('Membership Payment'),
-              const SizedBox(height: 8),
-              Text(
-                'Membership Fee: BDT 1500',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(height: 12),
-              _field(
-                  _paymentAmountController, 'Amount (BDT) *', Icons.money, _req,
-                  keyboard: TextInputType.number),
-              const SizedBox(height: 12),
-              _buildPaymentMethodDropdown(),
-              const SizedBox(height: 12),
-              _field(_transactionIdController, 'Transaction ID *',
-                  Icons.receipt_long_outlined, _req),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline,
-                        color: Colors.blue, size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Send BDT ${_paymentAmountController.text.isEmpty ? "2000" : _paymentAmountController.text} '
-                        'to 01813059794 via bKash/Nagad/Rocket and enter the Transaction ID above.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.blue.shade700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                const SizedBox(height: 12),
+                _field(
+                    _paymentAmountController, 'Amount (BDT) *', Icons.money, _req,
+                    keyboard: TextInputType.number),
+                const SizedBox(height: 12),
+                _buildPaymentMethodDropdown(),
+                const SizedBox(height: 12),
+                _field(_transactionIdController, 'Transaction ID *',
+                    Icons.receipt_long_outlined, _req),
+                const SizedBox(height: 8),
+                _paymentInfoBox(),
+              ]),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(
+                child: FilledButton.icon(
                   onPressed: _submitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                  ),
-                  child: _submitting
+                  icon: _submitting
                       ? const SizedBox(
                           height: 20,
                           width: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            color: AppColors.white,
                           ),
                         )
-                      : const Text('Submit Application',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600)),
+                      : const Icon(Icons.send_rounded),
+                  label: Text(
+                    _submitting ? 'Submitting...' : 'Submit Application',
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -472,10 +416,108 @@ class _RegistrationPageState extends State<RegistrationPage> {
     );
   }
 
-  Widget _sectionHeader(String title) {
-    return Text(title,
-        style: const TextStyle(
-            fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.primary));
+  Widget _buildSection(String title, IconData icon, List<Widget> children) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primary.withValues(alpha: 0.03),
+              AppColors.primary.withValues(alpha: 0.01),
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, size: 18, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: AppColors.primary, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Fill in your details and complete payment. After admin approval you can login with your mobile number.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.primary.withValues(alpha: 0.9),
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paymentInfoBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.info.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.info.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, color: AppColors.info, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Send BDT ${_paymentAmountController.text.isEmpty ? "2,000" : _paymentAmountController.text} '
+              'to 01813059794 via bKash/Nagad/Rocket and enter the Transaction ID above.',
+              style: TextStyle(
+                fontSize: 11,
+                color: AppColors.info.withValues(alpha: 0.9),
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _field(
@@ -496,7 +538,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   Widget _buildGenderDropdown() {
     return DropdownButtonFormField<String>(
-      value: _gender.isEmpty ? null : _gender,
+      initialValue: _gender.isEmpty ? null : _gender,
       decoration: const InputDecoration(
         labelText: 'Gender',
         prefixIcon: Icon(Icons.wc_outlined, color: AppColors.primary),
@@ -512,7 +554,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   Widget _buildBloodGroupDropdown() {
     return DropdownButtonFormField<String>(
-      value: _bloodGroup.isEmpty ? null : _bloodGroup,
+      initialValue: _bloodGroup.isEmpty ? null : _bloodGroup,
       decoration: const InputDecoration(
         labelText: 'Blood Group',
         prefixIcon: Icon(Icons.bloodtype_outlined, color: AppColors.primary),
@@ -526,7 +568,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   Widget _buildPaymentMethodDropdown() {
     return DropdownButtonFormField<String>(
-      value: _paymentMethod.isEmpty ? null : _paymentMethod,
+      initialValue: _paymentMethod.isEmpty ? null : _paymentMethod,
       decoration: const InputDecoration(
         labelText: 'Payment Method *',
         prefixIcon:
