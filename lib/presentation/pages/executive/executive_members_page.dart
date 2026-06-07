@@ -8,6 +8,7 @@ import '../../../data/datasources/executive_local_datasource.dart';
 import '../../../data/models/executive_member_model.dart';
 import '../../../domain/entities/executive_member_entity.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../widgets/section_state.dart';
 import '../../widgets/member_avatar.dart';
 
 class ExecutiveMembersPage extends StatefulWidget {
@@ -94,14 +95,20 @@ class _ExecutiveMembersPageState extends State<ExecutiveMembersPage> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           if (snap.hasError) {
-            return Center(child: Text('Error: ${snap.error}'));
+            return ErrorState(
+              message: 'Failed to load executive members',
+              onRetry: () => setState(() {}),
+            );
           }
           final list = snap.data ?? [];
           if (list.isEmpty) {
-            return const Center(child: Text('No executive members'));
+            return const EmptyState(
+              icon: Icons.people_outline,
+              title: 'No executive members',
+            );
           }
           return RefreshIndicator(
             onRefresh: () async => _refresh(),

@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/notice_entity.dart';
 import '../../../domain/repositories/content_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../widgets/section_state.dart';
 import 'notice_details_page.dart';
 
 class _NoticeCard extends StatelessWidget {
@@ -227,11 +228,11 @@ class _NoticesTabPageState extends State<NoticesTabPage> {
         stream: sl<ContentRepository>().streamNotices(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           final items = snap.data ?? const [];
           if (items.isEmpty) {
-            return const Center(child: Text('No notices'));
+            return const EmptyState(icon: Icons.campaign_outlined, title: 'No notices');
           }
           return RefreshIndicator(
             onRefresh: () async {},

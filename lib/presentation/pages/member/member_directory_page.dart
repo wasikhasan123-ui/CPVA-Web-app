@@ -10,6 +10,7 @@ import '../../../domain/repositories/auth_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/member/member_bloc.dart';
 import '../../widgets/member_avatar.dart';
+import '../../widgets/section_state.dart';
 
 class _MemberCard extends StatelessWidget {
   final MemberEntity member;
@@ -304,15 +305,19 @@ class _MemberDirectoryPageState extends State<MemberDirectoryPage> {
             child: BlocBuilder<MemberBloc, MemberState>(
               builder: (context, state) {
                 if (state is MemberLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return const LoadingState();
                 }
                 if (state is MemberError) {
-                  return Center(child: Text(state.message));
+                  return ErrorState(
+                    message: state.message,
+                    onRetry: () => context.read<MemberBloc>().add(const LoadMembers()),
+                  );
                 }
                 if (state is MembersLoaded) {
                   if (state.members.isEmpty) {
-                    return const Center(
-                      child: Text('No members found'),
+                    return const EmptyState(
+                      icon: Icons.people_outline,
+                      title: 'No members found',
                     );
                   }
                   return ListView.builder(

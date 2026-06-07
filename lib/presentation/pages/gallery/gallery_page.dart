@@ -9,6 +9,7 @@ import '../../../core/utils/drive_url_helper.dart';
 import '../../../domain/entities/gallery_entity.dart';
 import '../../../domain/repositories/content_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../widgets/section_state.dart';
 
 class GalleryPage extends StatefulWidget {
   const GalleryPage({super.key});
@@ -88,7 +89,7 @@ class _GalleryPageState extends State<GalleryPage>
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           final items = snap.data ?? const [];
           final photos = items.where((e) => e.type == 'photo').toList();
@@ -107,7 +108,7 @@ class _GalleryPageState extends State<GalleryPage>
 
   Widget _buildGrid(List<GalleryEntity> items, bool isAdmin) {
     if (items.isEmpty) {
-      return const Center(child: Text('No items'));
+      return const EmptyState(icon: Icons.photo_library_outlined, title: 'No gallery items');
     }
     return Padding(
       padding: const EdgeInsets.all(8),

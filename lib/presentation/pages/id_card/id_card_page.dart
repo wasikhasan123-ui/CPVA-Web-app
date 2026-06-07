@@ -16,6 +16,7 @@ import '../../../data/datasources/executive_local_datasource.dart';
 import '../../../data/models/executive_member_model.dart';
 import '../../../domain/entities/member_entity.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../widgets/section_state.dart';
 import '../../widgets/member_avatar.dart';
 
 class IdCardPage extends StatefulWidget {
@@ -48,7 +49,7 @@ class _IdCardPageState extends State<IdCardPage> {
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           if (state is! AuthAuthenticated) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           final user = state.user;
           return FutureBuilder<ExecutiveMemberModel?>(

@@ -11,6 +11,7 @@ import '../../../domain/entities/news_entity.dart';
 import '../../../domain/entities/notice_entity.dart';
 import '../../../domain/repositories/content_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../widgets/section_state.dart';
 
 class HomeTabPage extends StatelessWidget {
   const HomeTabPage({super.key});
@@ -22,7 +23,7 @@ class HomeTabPage extends StatelessWidget {
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
           if (state is! AuthAuthenticated) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           final user = state.user;
           return CustomScrollView(

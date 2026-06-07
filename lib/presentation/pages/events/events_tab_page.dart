@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/event_entity.dart';
 import '../../../domain/repositories/content_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../widgets/section_state.dart';
 import 'event_details_page.dart';
 
 class EventsTabPage extends StatefulWidget {
@@ -71,7 +72,7 @@ class _EventsTabPageState extends State<EventsTabPage> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           final all = (snap.data ?? const [])
             ..sort((a, b) => b.date.compareTo(a.date));
@@ -79,7 +80,7 @@ class _EventsTabPageState extends State<EventsTabPage> {
           final past = all.where((e) => !e.isUpcoming).toList();
 
           if (all.isEmpty) {
-            return const Center(child: Text('No events'));
+            return const EmptyState(icon: Icons.event_outlined, title: 'No events');
           }
           return RefreshIndicator(
             onRefresh: () async => _refresh(),

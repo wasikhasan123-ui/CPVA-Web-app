@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/news_entity.dart';
 import '../../../domain/repositories/content_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../widgets/section_state.dart';
 
 class NewsPage extends StatefulWidget {
   const NewsPage({super.key});
@@ -70,12 +71,12 @@ class _NewsPageState extends State<NewsPage> {
         future: _future,
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           final items = (snap.data ?? const [])
             ..sort((a, b) => b.date.compareTo(a.date));
           if (items.isEmpty) {
-            return const Center(child: Text('No news'));
+            return const EmptyState(icon: Icons.article_outlined, title: 'No news');
           }
           return ListView.builder(
             padding: const EdgeInsets.all(12),

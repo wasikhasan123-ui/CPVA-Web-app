@@ -7,6 +7,7 @@ import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../data/datasources/member_remote_datasource.dart';
 import '../../../../data/datasources/registration_remote_datasource.dart';
+import '../../../widgets/section_state.dart';
 
 class AdminDashboardTab extends StatefulWidget {
   final Future<void> Function() onRefresh;
@@ -27,7 +28,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       future: _loadDashboardStats(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingState();
         }
 
         if (snapshot.hasError) {

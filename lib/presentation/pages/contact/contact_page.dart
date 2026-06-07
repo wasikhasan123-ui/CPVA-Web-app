@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/contact_entity.dart';
 import '../../../domain/repositories/content_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
+import '../../widgets/section_state.dart';
 
 class _ContactCard extends StatelessWidget {
   final ContactEntity contact;
@@ -224,11 +225,11 @@ class _ContactPageState extends State<ContactPage> {
         stream: sl<ContentRepository>().streamContacts(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingState();
           }
           final items = snap.data ?? const [];
           if (items.isEmpty) {
-            return const Center(child: Text('No contacts'));
+            return const EmptyState(icon: Icons.contact_phone_outlined, title: 'No contacts');
           }
           return ListView.separated(
             padding: const EdgeInsets.all(12),
