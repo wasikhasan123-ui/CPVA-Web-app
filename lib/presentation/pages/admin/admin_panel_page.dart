@@ -16,6 +16,7 @@ import '../../../data/datasources/remote/remote_content_datasource.dart';
 import '../../../domain/repositories/auth_repository.dart';
 import 'services/member_csv_importer.dart';
 import 'widgets/admin_dashboard_tab.dart';
+import 'widgets/admin_payments_tab.dart';
 
 class AdminPanelPage extends StatefulWidget {
   const AdminPanelPage({super.key});
@@ -36,7 +37,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadApplications();
   }
 
@@ -106,6 +107,10 @@ class _AdminPanelPageState extends State<AdminPanelPage>
               ),
             ),
             const Tab(text: 'Processed'),
+            const Tab(
+              icon: Icon(Icons.payments),
+              text: 'Payments',
+            ),
             const Tab(text: 'Settings'),
           ],
         ),
@@ -144,6 +149,7 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                               _buildProcessedCard(_processed[i]),
                         ),
                       ),
+                const AdminPaymentsTab(),
                 _buildSettingsTab(),
               ],
             ),

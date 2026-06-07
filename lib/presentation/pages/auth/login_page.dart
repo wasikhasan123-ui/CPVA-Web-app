@@ -226,13 +226,14 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    ElevatedButton(
+                    FilledButton(
                       onPressed:
                           state is AuthLoading ? null : _handleLogin,
-                      style: ElevatedButton.styleFrom(
+                      style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       child: state is AuthLoading
                           ? const SizedBox(

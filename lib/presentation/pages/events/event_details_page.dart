@@ -73,7 +73,7 @@ class EventDetailsPage extends StatelessWidget {
             if (event.isUpcoming)
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
+                child: FilledButton.icon(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
@@ -83,8 +83,11 @@ class EventDetailsPage extends StatelessWidget {
                   },
                   icon: const Icon(Icons.how_to_reg),
                   label: const Text('Register for Event'),
-                  style: ElevatedButton.styleFrom(
+                  style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),

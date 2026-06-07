@@ -12,7 +12,11 @@ class MemberDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Member Details')),
+      appBar: AppBar(
+        title: const Text('Member Details'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.white,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -123,20 +127,37 @@ class MemberDetailsPage extends StatelessWidget {
 
   Widget _buildSection(String title, List<Widget> children) {
     return Card(
-      child: Padding(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: Container(
+        width: double.infinity,
         padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.primary.withValues(alpha: 0.03),
+              AppColors.primary.withValues(alpha: 0.01),
+            ],
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
               style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
                 color: AppColors.primary,
               ),
             ),
-            const Divider(),
+            const Divider(height: 20),
             ...children,
           ],
         ),

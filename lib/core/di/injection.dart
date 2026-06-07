@@ -6,6 +6,7 @@ import '../../data/datasources/executive_local_datasource.dart';
 import '../../data/datasources/local_content_service.dart';
 import '../../data/datasources/member_remote_datasource.dart';
 import '../../data/datasources/member_photo_cache.dart';
+import '../../data/datasources/payment_remote_datasource.dart';
 import '../../data/datasources/photo_service.dart';
 import '../../data/datasources/registration_remote_datasource.dart';
 import '../../data/datasources/remote/firestore_service.dart';
@@ -107,5 +108,8 @@ Future<void> resetDependencies() async {
   );
   sl.registerLazySingleton<ImgbbService>(
     () => ImgbbService(),
+  );
+  sl.registerLazySingleton<PaymentRemoteDataSource>(
+    () => PaymentRemoteDataSource(sl<FirestoreService>()),
   );
 }

@@ -34,7 +34,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Forgot Password'),
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
@@ -52,15 +52,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   'Click the link in the email to reset your password.',
                 ),
                 actions: [
-                  ElevatedButton(
+                  TextButton(
                     onPressed: () {
                       Navigator.pop(ctx);
                       context.go('/login');
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                    ),
                     child: const Text('Back to Login'),
                   ),
                 ],
@@ -124,12 +120,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
+                  FilledButton(
                     onPressed: state is AuthLoading ? null : _sendResetEmail,
-                    style: ElevatedButton.styleFrom(
+                    style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: state is AuthLoading
                         ? const SizedBox(

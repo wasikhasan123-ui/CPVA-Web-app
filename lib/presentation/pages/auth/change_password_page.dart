@@ -53,7 +53,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Change Password'),
-        backgroundColor: AppColors.primaryDark,
+        backgroundColor: AppColors.primary,
         foregroundColor: AppColors.white,
       ),
       body: BlocConsumer<AuthBloc, AuthState>(
@@ -68,15 +68,11 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                 content: const Text(
                     'Your password has been changed successfully.'),
                 actions: [
-                  ElevatedButton(
+                  TextButton(
                     onPressed: () {
                       Navigator.pop(ctx);
                       Navigator.pop(context);
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
-                    ),
                     child: const Text('OK'),
                   ),
                 ],
@@ -175,12 +171,13 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                         (v == null || v.isEmpty) ? 'Confirm new password' : null,
                   ),
                   const SizedBox(height: 24),
-                  ElevatedButton(
+                  FilledButton(
                     onPressed: state is AuthLoading ? null : _submit,
-                    style: ElevatedButton.styleFrom(
+                    style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: state is AuthLoading
                         ? const SizedBox(

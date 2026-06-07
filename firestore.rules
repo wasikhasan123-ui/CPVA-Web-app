@@ -65,8 +65,14 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    match /payments/{id} {
-      allow read, create, update, delete: if isAdmin();
+    match /payments/{paymentId} {
+      allow create: if emailVerified()
+        && request.resource.data.memberAuthUid == request.auth.uid;
+
+      allow read: if isAdmin()
+        || (emailVerified() && resource.data.memberAuthUid == request.auth.uid);
+
+      allow update, delete: if isAdmin();
     }
 
     match /passwords/{docId} {
