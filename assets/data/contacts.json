@@ -1,0 +1,46 @@
+{
+  "contacts": [
+    {
+      "id": "c1",
+      "name": "Dr. Imdadul Haque Bhuiyan",
+      "position": "President",
+      "phone": "01853548853",
+      "email": "president@cpva.org.bd"
+    },
+    {
+      "id": "c2",
+      "name": "Dr. Md. Seam Talokder",
+      "position": "Vice President",
+      "phone": "01819123456",
+      "email": "vp@cpva.org.bd"
+    },
+    {
+      "id": "c3",
+      "name": "Dr. Mohammed Tareq Aziz",
+      "position": "General Secretary",
+      "phone": "01714367786",
+      "email": "secretary@cpva.org.bd"
+    },
+    {
+      "id": "c4",
+      "name": "Dr. Saddam Hossain",
+      "position": "Treasurer",
+      "phone": "01911000000",
+      "email": "treasurer@cpva.org.bd"
+    },
+    {
+      "id": "c5",
+      "name": "Dr. Nazmul Hasan",
+      "position": "Joint Secretary",
+      "phone": "01671112233",
+      "email": "jointsec@cpva.org.bd"
+    },
+    {
+      "id": "c6",
+      "name": "CPVA Office",
+      "position": "Office Landline",
+      "phone": "031-712345",
+      "email": "office@cpva.org.bd"
+    }
+  ]
+}
