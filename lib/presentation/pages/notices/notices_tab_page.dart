@@ -10,6 +10,182 @@ import '../../../domain/repositories/content_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import 'notice_details_page.dart';
 
+class _NoticeCard extends StatelessWidget {
+  final NoticeEntity notice;
+  final bool isAdmin;
+  final VoidCallback onTap;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+
+  const _NoticeCard({
+    required this.notice,
+    required this.isAdmin,
+    required this.onTap,
+    this.onEdit,
+    this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primary.withValues(alpha: 0.04),
+                AppColors.primary.withValues(alpha: 0.01),
+              ],
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.campaign, color: AppColors.primary, size: 22),
+                  ),
+                  if (notice.isPinned)
+                    Positioned(
+                      right: -3,
+                      top: -3,
+                      child: Container(
+                        width: 18,
+                        height: 18,
+                        decoration: const BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.push_pin, size: 10, color: AppColors.white),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      notice.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.softGreen,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            notice.category,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primaryDark,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _fmtDate(notice.date),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                children: [
+                  if (isAdmin)
+                    SizedBox(
+                      height: 28,
+                      child: PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.more_vert, size: 18,
+                            color: AppColors.textSecondary),
+                        onSelected: (v) {
+                          if (v == 'edit') onEdit?.call();
+                          if (v == 'delete') onDelete?.call();
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: ListTile(
+                              leading: Icon(Icons.edit, size: 18),
+                              title: Text('Edit',
+                                  style: TextStyle(fontSize: 13)),
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: ListTile(
+                              leading: Icon(Icons.delete, size: 18,
+                                  color: AppColors.error),
+                              title: Text('Delete',
+                                  style: TextStyle(fontSize: 13,
+                                      color: AppColors.error)),
+                              contentPadding: EdgeInsets.zero,
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 4),
+                  const Icon(Icons.chevron_right, size: 18,
+                      color: AppColors.textHint),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _fmtDate(String iso) {
+    try {
+      return DateFormat('d MMM yyyy').format(DateTime.parse(iso));
+    } catch (_) {
+      return iso;
+    }
+  }
+}
+
 class NoticesTabPage extends StatefulWidget {
   const NoticesTabPage({super.key});
 
@@ -64,69 +240,21 @@ class _NoticesTabPageState extends State<NoticesTabPage> {
               itemCount: items.length,
               itemBuilder: (context, i) {
                 final n = items[i];
-                return Card(
-                  child: ListTile(
-                    leading: Stack(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor:
-                              AppColors.primary.withValues(alpha: 0.15),
-                          child: const Icon(
-                            Icons.campaign,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        if (n.isPinned)
-                          const Positioned(
-                            right: 0,
-                            top: 0,
-                            child: Icon(
-                              Icons.push_pin,
-                              size: 14,
-                              color: AppColors.error,
-                            ),
-                          ),
-                      ],
-                    ),
-                    title: Text(
-                      n.title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      '${n.category} • ${_fmtDate(n.date)}',
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (isAdmin) ...[
-                          IconButton(
-                            icon: const Icon(Icons.edit, size: 18),
-                            onPressed: () async {
-                              await context.push<bool>(
-                                '/edit-notice',
-                                extra: n,
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete,
-                                size: 18, color: AppColors.error),
-                            onPressed: () => _confirmDelete(n),
-                          ),
-                        ],
-                        const Icon(Icons.arrow_forward_ios, size: 14),
-                      ],
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => NoticeDetailsPage(notice: n),
-                        ),
-                      );
-                    },
-                  ),
+                return _NoticeCard(
+                  notice: n,
+                  isAdmin: isAdmin,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => NoticeDetailsPage(notice: n),
+                      ),
+                    );
+                  },
+                  onEdit: () async {
+                    await context.push<bool>('/edit-notice', extra: n);
+                  },
+                  onDelete: () => _confirmDelete(n),
                 );
               },
             ),
@@ -170,14 +298,6 @@ class _NoticesTabPageState extends State<NoticesTabPage> {
           );
         }
       }
-    }
-  }
-
-  String _fmtDate(String iso) {
-    try {
-      return DateFormat('d MMM yyyy').format(DateTime.parse(iso));
-    } catch (_) {
-      return iso;
     }
   }
 }
