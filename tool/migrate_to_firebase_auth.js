@@ -58,7 +58,7 @@ const auth = getAuth();
 const db = getFirestore();
 
 const ADMIN_MOBILE = '01853548853';
-const ADMIN_PASSWORD = 'admin';
+const ADMIN_PASSWORD = 'admin123';
 const MEMBER_PASSWORD = 'cpva2026';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

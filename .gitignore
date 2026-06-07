@@ -100,5 +100,9 @@ $RECYCLE.BIN/
 *.seed
 *.pid.lock
 
+# Node.js / npm (migration scripts)
+node_modules/
+package-lock.json
+
 # Coverage
 coverage/
