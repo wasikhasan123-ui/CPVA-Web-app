@@ -418,126 +418,180 @@ class _FrontSide extends StatelessWidget {
 
     final unit = cardW / 100;
 
-    return Card(
-      elevation: 8,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(unit * 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: unit * 2,
+            offset: Offset(0, unit * 0.8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: unit * 4,
+            offset: Offset(0, unit * 2),
+          ),
+        ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           _header(unit),
           Expanded(
             child: Container(
-              color: CpvaInfo.cardBody,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    CpvaInfo.cardBody,
+                    CpvaInfo.cardBodyGradient.withValues(alpha: 0.5),
+                  ],
+                ),
+              ),
               padding: EdgeInsets.fromLTRB(
                 unit * 2.2,
                 unit * 2,
                 unit * 2.2,
                 unit * 1.5,
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: BengaliText.bold(
-                            fontSize: unit * 3.2,
-                            color: AppColors.textPrimary,
-                          ),
+                  Positioned(
+                    right: -unit * 2,
+                    bottom: -unit * 2,
+                    child: Opacity(
+                      opacity: 0.04,
+                      child: Text(
+                        'CPVA',
+                        style: TextStyle(
+                          fontSize: unit * 18,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textPrimary,
+                          letterSpacing: 4,
                         ),
-                        SizedBox(height: unit * 1.2),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: unit * 1.4,
-                            vertical: unit * 0.7,
-                          ),
-                          decoration: BoxDecoration(
-                            color: CpvaInfo.cardAccent,
-                            borderRadius:
-                                BorderRadius.circular(unit * 0.6),
-                          ),
-                          child: Text(
-                            '$designation ($designationEn)',
-                            style: BengaliText.semibold(
-                              fontSize: unit * 2.3,
-                              color: AppColors.white,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        SizedBox(height: unit * 2.4),
-                        _kv(
-                          CpvaInfo.idLabel,
-                          memberNo,
-                          unit: unit,
-                        ),
-                        SizedBox(height: unit * 1.4),
-                        _kv(
-                          CpvaInfo.bloodGroupLabel,
-                          _bloodGroupDisplay(user.bloodGroup),
-                          unit: unit,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  SizedBox(width: unit * 1.8),
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      children: [
-                        AspectRatio(
-                          aspectRatio: 3 / 4,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.primary
-                                  .withValues(alpha: 0.06),
-                              border: Border.all(
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              name,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: BengaliText.bold(
+                                fontSize: unit * 3.2,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            SizedBox(height: unit * 1.2),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: unit * 1.4,
+                                vertical: unit * 0.7,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: CpvaInfo.cardAccentGradient,
+                                borderRadius:
+                                    BorderRadius.circular(unit * 0.6),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: CpvaInfo.cardAccent.withValues(alpha: 0.3),
+                                    blurRadius: unit * 0.6,
+                                    offset: Offset(0, unit * 0.3),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '$designation ($designationEn)',
+                                style: BengaliText.semibold(
+                                  fontSize: unit * 2.3,
+                                  color: AppColors.white,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            SizedBox(height: unit * 2.4),
+                            _kv(
+                              CpvaInfo.idLabel,
+                              memberNo,
+                              unit: unit,
+                            ),
+                            SizedBox(height: unit * 1.4),
+                            _kv(
+                              CpvaInfo.bloodGroupLabel,
+                              _bloodGroupDisplay(user.bloodGroup),
+                              unit: unit,
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: unit * 1.8),
+                      Expanded(
+                        flex: 3,
+                        child: Column(
+                          children: [
+                            AspectRatio(
+                              aspectRatio: 3 / 4,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.white,
+                                  borderRadius:
+                                      BorderRadius.circular(unit * 1.2),
+                                  border: Border.all(
+                                    color: CpvaInfo.cardAccent.withValues(alpha: 0.3),
+                                    width: 1.5,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.08),
+                                      blurRadius: unit * 1.2,
+                                      offset: Offset(0, unit * 0.6),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius:
+                                      BorderRadius.circular(unit * 1.0),
+                                  child: MemberAvatar(
+                                    memberId: user.id,
+                                    photoUrl: user.photoUrl.isNotEmpty
+                                        ? user.photoUrl
+                                        : null,
+                                    initials: user.initials,
+                                    radius: 200,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: unit * 0.8),
+                            Text(
+                              CpvaInfo.photoPlaceholder,
+                              style: TextStyle(
+                                fontSize: unit * 2.0,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textSecondary,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            Text(
+                              CpvaInfo.photoHint,
+                              style: BengaliText.regular(
+                                fontSize: unit * 1.9,
                                 color: AppColors.textHint,
-                                width: 1,
-                              ),
-                              borderRadius:
-                                  BorderRadius.circular(unit * 0.8),
-                            ),
-                            child: ClipRRect(
-                              borderRadius:
-                                  BorderRadius.circular(unit * 0.6),
-                              child: MemberAvatar(
-                                memberId: user.id,
-                                photoUrl: user.photoUrl.isNotEmpty
-                                    ? user.photoUrl
-                                    : null,
-                                initials: user.initials,
-                                radius: 200,
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                        SizedBox(height: unit * 0.8),
-                        Text(
-                          CpvaInfo.photoPlaceholder,
-                          style: TextStyle(
-                            fontSize: unit * 2.0,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        Text(
-                          CpvaInfo.photoHint,
-                          style: BengaliText.regular(
-                            fontSize: unit * 1.9,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -545,7 +599,9 @@ class _FrontSide extends StatelessWidget {
           ),
           Container(
             width: double.infinity,
-            color: CpvaInfo.cardAccent,
+            decoration: const BoxDecoration(
+              gradient: CpvaInfo.cardAccentGradient,
+            ),
             padding: EdgeInsets.symmetric(vertical: unit * 1.5),
             alignment: Alignment.center,
             child: Text(
@@ -566,7 +622,9 @@ class _FrontSide extends StatelessWidget {
   Widget _header(double unit) {
     return Container(
       width: double.infinity,
-      color: CpvaInfo.cardHeader,
+      decoration: const BoxDecoration(
+        gradient: CpvaInfo.cardHeaderGradient,
+      ),
       padding: EdgeInsets.fromLTRB(
         unit * 1.8,
         unit * 1.5,
@@ -578,9 +636,16 @@ class _FrontSide extends StatelessWidget {
           Container(
             width: unit * 7,
             height: unit * 7,
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.white,
               shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: unit * 0.5,
+                  offset: Offset(0, unit * 0.3),
+                ),
+              ],
             ),
             alignment: Alignment.center,
             child: Text(
@@ -588,7 +653,8 @@ class _FrontSide extends StatelessWidget {
               style: TextStyle(
                 color: CpvaInfo.cardHeader,
                 fontSize: unit * 1.8,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.5,
               ),
             ),
           ),
@@ -606,8 +672,15 @@ class _FrontSide extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.white,
                     fontSize: unit * 2.2,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.3,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 1,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                 ),
                 SizedBox(height: unit * 0.3),
@@ -677,17 +750,30 @@ class _BackSide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unit = cardW / 100;
-    return Card(
-      elevation: 8,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(unit * 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.12),
+            blurRadius: unit * 2,
+            offset: Offset(0, unit * 0.8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: unit * 4,
+            offset: Offset(0, unit * 2),
+          ),
+        ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           Container(
             width: double.infinity,
-            color: CpvaInfo.cardBackHeader,
+            decoration: const BoxDecoration(
+              gradient: CpvaInfo.cardHeaderGradient,
+            ),
             padding: EdgeInsets.symmetric(vertical: unit * 1.5),
             alignment: Alignment.center,
             child: Text(
@@ -702,62 +788,91 @@ class _BackSide extends StatelessWidget {
           ),
           Expanded(
             child: Container(
-              color: CpvaInfo.cardBody,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    CpvaInfo.cardBody,
+                    CpvaInfo.cardBodyGradient.withValues(alpha: 0.5),
+                  ],
+                ),
+              ),
               padding: EdgeInsets.fromLTRB(
                 unit * 2.2,
                 unit * 2,
                 unit * 2.2,
                 unit * 1.5,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Stack(
                 children: [
-                  ...CpvaInfo.termsBn.map(
-                    (t) => Padding(
-                      padding: EdgeInsets.only(bottom: unit * 1.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.only(
-                                top: unit * 0.2, right: unit * 0.6),
-                            child: Text(
-                              '•',
-                              style: TextStyle(
-                                fontSize: unit * 2.2,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              t,
-                              style: BengaliText.regular(
-                                fontSize: unit * 2.2,
-                                color: AppColors.textPrimary,
-                              ).copyWith(height: 1.3),
-                            ),
-                          ),
-                        ],
+                  Positioned(
+                    right: -unit * 2,
+                    bottom: -unit * 2,
+                    child: Opacity(
+                      opacity: 0.04,
+                      child: Text(
+                        'CPVA',
+                        style: TextStyle(
+                          fontSize: unit * 18,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.textPrimary,
+                          letterSpacing: 4,
+                        ),
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _signature(
-                          CpvaInfo.sigLeft,
-                          CpvaInfo.sigLeftSub,
-                          unit: unit,
+                      ...CpvaInfo.termsBn.map(
+                        (t) => Padding(
+                          padding: EdgeInsets.only(bottom: unit * 1.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: EdgeInsets.only(
+                                    top: unit * 0.2, right: unit * 0.6),
+                                child: Text(
+                                  '•',
+                                  style: TextStyle(
+                                    fontSize: unit * 2.2,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  t,
+                                  style: BengaliText.regular(
+                                    fontSize: unit * 2.2,
+                                    color: AppColors.textPrimary,
+                                  ).copyWith(height: 1.3),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      Expanded(
-                        child: _signature(
-                          CpvaInfo.sigRight,
-                          CpvaInfo.sigRightSub,
-                          unit: unit,
-                        ),
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _signature(
+                              CpvaInfo.sigLeft,
+                              CpvaInfo.sigLeftSub,
+                              unit: unit,
+                            ),
+                          ),
+                          Expanded(
+                            child: _signature(
+                              CpvaInfo.sigRight,
+                              CpvaInfo.sigRightSub,
+                              unit: unit,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -767,7 +882,9 @@ class _BackSide extends StatelessWidget {
           ),
           Container(
             width: double.infinity,
-            color: CpvaInfo.cardAccent,
+            decoration: const BoxDecoration(
+              gradient: CpvaInfo.cardAccentGradient,
+            ),
             padding: EdgeInsets.symmetric(vertical: unit * 1.5),
             alignment: Alignment.center,
             child: Text(

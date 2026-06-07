@@ -4,10 +4,25 @@ class CpvaInfo {
   CpvaInfo._();
 
   static const Color cardHeader = Color(0xFF1F5673);
+  static const Color cardHeaderDark = Color(0xFF0D3B52);
   static const Color cardAccent = Color(0xFF2C7DA0);
-  static const Color cardBody = Color(0xFFFFFFFF);
-  static const Color cardBackHeader = Color(0xFF1F5673);
+  static const Color cardAccentLight = Color(0xFF4A90D9);
+  static const Color cardBody = Color(0xFFFAFCFA);
+  static const Color cardBodyGradient = Color(0xFFF0F7F0);
+  static const Color cardBackHeader = Color(0xFF1A4D6B);
   static const Color cardBackAccent = Color(0xFFE3F2FD);
+
+  static const LinearGradient cardHeaderGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [cardHeaderDark, cardHeader],
+  );
+
+  static const LinearGradient cardAccentGradient = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [cardAccent, cardAccentLight],
+  );
 
   static const String orgName = 'CHITTAGONG PRIVATE VETERINARY ASSOCIATION';
   static const String orgNameBn = 'চট্টগ্রাম প্রাইভেট ভেটেরিনারি অ্যাসোসিয়েশন';
