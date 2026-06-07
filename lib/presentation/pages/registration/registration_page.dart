@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/di/injection.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../data/datasources/member_remote_datasource.dart';
 import '../../../data/datasources/registration_remote_datasource.dart';
 
 class RegistrationPage extends StatefulWidget {
@@ -64,110 +63,80 @@ class _RegistrationPageState extends State<RegistrationPage> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
-    final mobileClean =
-        _mobileController.text.trim().replaceAll(RegExp(r'[^\d]'), '');
-
-    final memberDs = sl<MemberRemoteDataSource>();
-    final existingMember = await memberDs.findByMobile(mobileClean);
-    if (existingMember != null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content:
-                Text('This mobile number is already registered. Please login.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-      return;
-    }
-
-    final regDs = sl<RegistrationRemoteDataSource>();
-    final existingApp = await regDs.findByMobile(mobileClean);
-    if (existingApp != null) {
-      if (mounted) {
-        String msg = 'You have already submitted an application.';
-        if (existingApp.status == 'approved') {
-          msg = 'Your application has been approved! Please login.';
-        } else if (existingApp.status == 'rejected') {
-          msg = 'Your previous application was rejected.';
-          if (existingApp.rejectionReason != null) {
-            msg += ' Reason: ${existingApp.rejectionReason}';
-          }
-        } else {
-          msg = 'Your application is pending admin approval. Please wait.';
-        }
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: AppColors.warning),
-        );
-      }
-      return;
-    }
+    if (_submitting) return;
 
     setState(() => _submitting = true);
 
-    String authUid = '';
+    fb_auth.User? createdUser;
+    bool applicationSubmitted = false;
+    Object? verificationError;
+
     try {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
       final credential =
           await fb_auth.FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+        email: email,
+        password: password,
       );
-      authUid = credential.user!.uid;
-      await credential.user!.sendEmailVerification();
-      await fb_auth.FirebaseAuth.instance.signOut();
-    } catch (e) {
-      setState(() => _submitting = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create account: $e'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+
+      createdUser = credential.user;
+
+      if (createdUser == null) {
+        throw Exception('Could not create Firebase Auth user.');
       }
-      return;
-    }
 
-    final app = MembershipApplication(
-      id: 'APP-${DateTime.now().millisecondsSinceEpoch}',
-      name: _nameController.text.trim(),
-      mobile: _mobileController.text.trim(),
-      email: _emailController.text.trim(),
-      gender: _gender,
-      fatherName: _fatherNameController.text.trim(),
-      motherName: _motherNameController.text.trim(),
-      bloodGroup: _bloodGroup,
-      bvcRegNo: _bvcRegNoController.text.trim(),
-      dvmInstitute: _dvmInstituteController.text.trim(),
-      specialization: _specializationController.text.trim(),
-      workType: _workTypeController.text.trim(),
-      instituteName: _instituteController.text.trim(),
-      address: _addressController.text.trim(),
-      paymentAmount: _paymentAmountController.text.trim(),
-      paymentMethod: _paymentMethod,
-      transactionId: _transactionIdController.text.trim(),
-      password: '',
-      authUid: authUid,
-      submittedAt: DateTime.now().toIso8601String(),
-    );
+      final app = MembershipApplication(
+        id: 'APP-${DateTime.now().millisecondsSinceEpoch}',
+        name: _nameController.text.trim(),
+        mobile: _mobileController.text.trim(),
+        email: email,
+        gender: _gender,
+        fatherName: _fatherNameController.text.trim(),
+        motherName: _motherNameController.text.trim(),
+        bloodGroup: _bloodGroup,
+        bvcRegNo: _bvcRegNoController.text.trim(),
+        dvmInstitute: _dvmInstituteController.text.trim(),
+        specialization: _specializationController.text.trim(),
+        workType: _workTypeController.text.trim(),
+        instituteName: _instituteController.text.trim(),
+        address: _addressController.text.trim(),
+        paymentAmount: _paymentAmountController.text.trim(),
+        paymentMethod: _paymentMethod,
+        transactionId: _transactionIdController.text.trim(),
+        password: '',
+        authUid: createdUser.uid,
+        submittedAt: DateTime.now().toIso8601String(),
+      );
 
-    await regDs.submitApplication(app);
+      await sl<RegistrationRemoteDataSource>().submitApplication(app);
+      applicationSubmitted = true;
 
-    setState(() => _submitting = false);
+      try {
+        await createdUser.sendEmailVerification();
+      } catch (e) {
+        verificationError = e;
+      }
 
-    if (mounted) {
+      await fb_auth.FirebaseAuth.instance.signOut();
+
+      if (!mounted) return;
+
+      final message = verificationError == null
+          ? 'Registration submitted. Please verify your email. Admin will approve your application.'
+          : 'Registration submitted, but verification email could not be sent. Please try logging in later and request verification again, or contact admin.';
+
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          icon:
-              const Icon(Icons.check_circle, color: AppColors.success, size: 48),
-          title: const Text('Application Submitted!'),
-          content: const Text(
-            'Registration submitted. Please verify your email. '
-            'Admin will approve your application.',
+          icon: const Icon(
+            Icons.check_circle,
+            color: AppColors.success,
+            size: 48,
           ),
+          title: const Text('Application Submitted!'),
+          content: Text(message),
           actions: [
             ElevatedButton(
               onPressed: () {
@@ -183,6 +152,67 @@ class _RegistrationPageState extends State<RegistrationPage> {
           ],
         ),
       );
+    } on fb_auth.FirebaseAuthException catch (e) {
+      if (!applicationSubmitted && createdUser != null) {
+        try {
+          await createdUser.delete();
+        } catch (_) {}
+      }
+
+      try {
+        await fb_auth.FirebaseAuth.instance.signOut();
+      } catch (_) {}
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_firebaseRegistrationErrorMessage(e)),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    } catch (e) {
+      if (!applicationSubmitted && createdUser != null) {
+        try {
+          await createdUser.delete();
+        } catch (_) {}
+      }
+
+      try {
+        await fb_auth.FirebaseAuth.instance.signOut();
+      } catch (_) {}
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit application: $e'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  String _firebaseRegistrationErrorMessage(fb_auth.FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'This email already has an account. Please login or use Forgot Password.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'weak-password':
+        return 'Password is too weak. Please use at least 6 characters.';
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      case 'operation-not-allowed':
+        return 'Email/password signup is not enabled in Firebase.';
+      default:
+        return e.message ?? 'Registration failed. Please try again.';
     }
   }
 
