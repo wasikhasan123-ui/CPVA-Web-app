@@ -61,7 +61,7 @@ class _EditNoticePageState extends State<EditNoticePage> {
       isPinned: _isPinned,
     );
     await sl<ContentRepository>().saveNotice(notice);
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context, true);
   }
 
   @override

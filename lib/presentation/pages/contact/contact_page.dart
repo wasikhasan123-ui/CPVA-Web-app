@@ -17,20 +17,6 @@ class ContactPage extends StatefulWidget {
 }
 
 class _ContactPageState extends State<ContactPage> {
-  late Future<List<ContactEntity>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = sl<ContentRepository>().getContacts();
-  }
-
-  void _refresh() {
-    setState(() {
-      _future = sl<ContentRepository>().getContacts();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isAdmin =
@@ -48,26 +34,20 @@ class _ContactPageState extends State<ContactPage> {
             IconButton(
               icon: const Icon(Icons.add),
               tooltip: 'Add Contact',
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-contact');
-                if (result == true) _refresh();
-              },
+              onPressed: () => context.push<bool>('/edit-contact'),
             ),
         ],
       ),
       floatingActionButton: isAdmin
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-contact');
-                if (result == true) _refresh();
-              },
+              onPressed: () => context.push<bool>('/edit-contact'),
               icon: const Icon(Icons.add),
               label: const Text('Add Contact'),
               backgroundColor: AppColors.primary,
             )
           : null,
-      body: FutureBuilder<List<ContactEntity>>(
-        future: _future,
+      body: StreamBuilder<List<ContactEntity>>(
+        stream: sl<ContentRepository>().streamContacts(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -131,11 +111,10 @@ class _ContactPageState extends State<ContactPage> {
                                 IconButton(
                                   icon: const Icon(Icons.edit, size: 18),
                                   onPressed: () async {
-                                    final result = await context.push<bool>(
+                                    await context.push<bool>(
                                       '/edit-contact',
                                       extra: c,
                                     );
-                                    if (result == true) _refresh();
                                   },
                                 ),
                                 IconButton(
@@ -220,8 +199,20 @@ class _ContactPageState extends State<ContactPage> {
       ),
     );
     if (ok == true) {
-      await sl<ContentRepository>().deleteContact(c.id);
-      _refresh();
+      try {
+        await sl<ContentRepository>().deleteContact(c.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Contact deleted')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete contact: $e')),
+          );
+        }
+      }
     }
   }
 

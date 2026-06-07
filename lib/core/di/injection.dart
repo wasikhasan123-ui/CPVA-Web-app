@@ -67,6 +67,14 @@ Future<void> resetDependencies() async {
     ),
     instanceName: 'gallery',
   );
+  sl.registerLazySingleton<RemoteContentDataSource>(
+    () => RemoteContentDataSource(sl<FirestoreService>(), 'notices', 'cpva_notices_seeded_v1'),
+    instanceName: 'notices',
+  );
+  sl.registerLazySingleton<RemoteContentDataSource>(
+    () => RemoteContentDataSource(sl<FirestoreService>(), 'contacts', 'cpva_contacts_seeded_v1'),
+    instanceName: 'contacts',
+  );
   sl.registerLazySingleton<MemberRepository>(
     () => MemberRepositoryImpl(sl<MemberRemoteDataSource>()),
   );
@@ -76,6 +84,8 @@ Future<void> resetDependencies() async {
       sl<RemoteContentDataSource>(instanceName: 'events'),
       sl<RemoteContentDataSource>(instanceName: 'news'),
       sl<RemoteContentDataSource>(instanceName: 'gallery'),
+      sl<RemoteContentDataSource>(instanceName: 'notices'),
+      sl<RemoteContentDataSource>(instanceName: 'contacts'),
     ),
   );
   sl.registerLazySingleton<PhotoService>(

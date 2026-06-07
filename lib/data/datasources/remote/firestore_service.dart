@@ -9,7 +9,8 @@ class FirestoreService {
         .snapshots()
         .map((snap) => snap.docs.map((d) {
               final data = d.data();
-              data['id'] = d.id;
+              data['docId'] = d.id;
+              data['id'] = data['id'] ?? d.id;
               return data;
             }).toList());
   }
@@ -18,7 +19,8 @@ class FirestoreService {
     final snap = await _db.collection(collection).get();
     return snap.docs.map((d) {
       final data = d.data();
-      data['id'] = d.id;
+      data['docId'] = d.id;
+      data['id'] = data['id'] ?? d.id;
       return data;
     }).toList();
   }
@@ -61,7 +63,8 @@ class FirestoreService {
         .get();
     return snap.docs.map((d) {
       final data = d.data();
-      data['id'] = d.id;
+      data['docId'] = d.id;
+      data['id'] = data['id'] ?? d.id;
       return data;
     }).toList();
   }

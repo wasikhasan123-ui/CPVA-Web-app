@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 
 import '../../domain/entities/contact_entity.dart';
@@ -14,12 +16,16 @@ class ContentRepositoryImpl implements ContentRepository {
   final RemoteContentDataSource _events;
   final RemoteContentDataSource _news;
   final RemoteContentDataSource _gallery;
+  final RemoteContentDataSource _notices;
+  final RemoteContentDataSource _contacts;
 
   ContentRepositoryImpl(
     this._service,
     this._events,
     this._news,
     this._gallery,
+    this._notices,
+    this._contacts,
   );
 
   Future<void> _ensureSeed() async {
@@ -27,10 +33,47 @@ class ContentRepositoryImpl implements ContentRepository {
     await _events.seedFromJson('events', 'events');
     await _news.seedFromJson('news', 'news');
     await _gallery.seedFromJson('gallery', 'gallery');
+    await _notices.seedFromJson('notices', 'notices');
+    await _contacts.seedFromJson('contacts', 'contacts');
   }
 
   @override
-  Future<List<NoticeEntity>> getNotices() => _service.getNotices();
+  Future<List<NoticeEntity>> getNotices() async {
+    if (!kIsWeb) return _service.getNotices();
+    try {
+      await _ensureSeed();
+      final data = await _notices.getAll();
+      final list = data
+          .map((d) => NoticeEntity.fromJson(Map<String, dynamic>.from(d)))
+          .toList();
+      list.sort(_sortNotices);
+      return list;
+    } catch (_) {
+      return _service.getNotices();
+    }
+  }
+
+  @override
+  Stream<List<NoticeEntity>> streamNotices() {
+    if (!kIsWeb) return Stream.fromFuture(_service.getNotices());
+    return Stream.fromFuture(_ensureSeed()).asyncExpand((_) {
+      return _notices.streamAll().map((data) {
+        final list = data
+            .map((d) => NoticeEntity.fromJson(Map<String, dynamic>.from(d)))
+            .toList();
+        list.sort(_sortNotices);
+        return list;
+      });
+    });
+  }
+
+  int _sortNotices(NoticeEntity a, NoticeEntity b) {
+    if (a.isPinned != b.isPinned) return a.isPinned ? -1 : 1;
+    final ad = DateTime.tryParse(a.date);
+    final bd = DateTime.tryParse(b.date);
+    if (ad != null && bd != null) return bd.compareTo(ad);
+    return b.date.compareTo(a.date);
+  }
 
   @override
   Future<List<EventEntity>> getEvents() async {
@@ -57,10 +100,36 @@ class ContentRepositoryImpl implements ContentRepository {
   }
 
   @override
-  Future<List<ContactEntity>> getContacts() => _service.getContacts();
+  Future<List<ContactEntity>> getContacts() async {
+    if (!kIsWeb) return _service.getContacts();
+    try {
+      await _ensureSeed();
+      final data = await _contacts.getAll();
+      return data
+          .map((d) => ContactEntity.fromJson(Map<String, dynamic>.from(d)))
+          .toList();
+    } catch (_) {
+      return _service.getContacts();
+    }
+  }
+
+  @override
+  Stream<List<ContactEntity>> streamContacts() {
+    if (!kIsWeb) return Stream.fromFuture(_service.getContacts());
+    return Stream.fromFuture(_ensureSeed()).asyncExpand((_) {
+      return _contacts.streamAll().map((data) => data
+          .map((d) => ContactEntity.fromJson(Map<String, dynamic>.from(d)))
+          .toList());
+    });
+  }
 
   @override
   Future<void> saveNotice(NoticeEntity notice) async {
+    if (kIsWeb) {
+      await _ensureSeed();
+      await _notices.set(notice.id, notice.toJson());
+      return;
+    }
     final list = await _service.getNotices();
     final idx = list.indexWhere((e) => e.id == notice.id);
     if (idx >= 0) {
@@ -73,6 +142,10 @@ class ContentRepositoryImpl implements ContentRepository {
 
   @override
   Future<void> deleteNotice(String id) async {
+    if (kIsWeb) {
+      await _notices.deleteWhere(id);
+      return;
+    }
     final list = await _service.getNotices();
     list.removeWhere((e) => e.id == id);
     await _service.saveNotices(list);
@@ -186,6 +259,11 @@ class ContentRepositoryImpl implements ContentRepository {
 
   @override
   Future<void> saveContact(ContactEntity contact) async {
+    if (kIsWeb) {
+      await _ensureSeed();
+      await _contacts.set(contact.id, contact.toJson());
+      return;
+    }
     final list = await _service.getContacts();
     final idx = list.indexWhere((e) => e.id == contact.id);
     if (idx >= 0) {
@@ -198,6 +276,10 @@ class ContentRepositoryImpl implements ContentRepository {
 
   @override
   Future<void> deleteContact(String id) async {
+    if (kIsWeb) {
+      await _contacts.deleteWhere(id);
+      return;
+    }
     final list = await _service.getContacts();
     list.removeWhere((e) => e.id == id);
     await _service.saveContacts(list);

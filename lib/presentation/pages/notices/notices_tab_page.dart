@@ -18,20 +18,6 @@ class NoticesTabPage extends StatefulWidget {
 }
 
 class _NoticesTabPageState extends State<NoticesTabPage> {
-  late Future<List<NoticeEntity>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = sl<ContentRepository>().getNotices();
-  }
-
-  void _refresh() {
-    setState(() {
-      _future = sl<ContentRepository>().getNotices();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isAdmin =
@@ -49,41 +35,30 @@ class _NoticesTabPageState extends State<NoticesTabPage> {
             IconButton(
               icon: const Icon(Icons.add),
               tooltip: 'Add Notice',
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-notice');
-                if (result == true) _refresh();
-              },
+              onPressed: () => context.push<bool>('/edit-notice'),
             ),
         ],
       ),
       floatingActionButton: isAdmin
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-notice');
-                if (result == true) _refresh();
-              },
+              onPressed: () => context.push<bool>('/edit-notice'),
               icon: const Icon(Icons.add),
               label: const Text('Add Notice'),
               backgroundColor: AppColors.primary,
             )
           : null,
-      body: FutureBuilder<List<NoticeEntity>>(
-        future: _future,
+      body: StreamBuilder<List<NoticeEntity>>(
+        stream: sl<ContentRepository>().streamNotices(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final items = (snap.data ?? [])
-            ..sort((a, b) {
-              if (a.isPinned && !b.isPinned) return -1;
-              if (!a.isPinned && b.isPinned) return 1;
-              return b.date.compareTo(a.date);
-            });
+          final items = snap.data ?? const [];
           if (items.isEmpty) {
             return const Center(child: Text('No notices'));
           }
           return RefreshIndicator(
-            onRefresh: () async => _refresh(),
+            onRefresh: () async {},
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
               itemCount: items.length,
@@ -128,11 +103,10 @@ class _NoticesTabPageState extends State<NoticesTabPage> {
                           IconButton(
                             icon: const Icon(Icons.edit, size: 18),
                             onPressed: () async {
-                              final result = await context.push<bool>(
+                              await context.push<bool>(
                                 '/edit-notice',
                                 extra: n,
                               );
-                              if (result == true) _refresh();
                             },
                           ),
                           IconButton(
@@ -182,8 +156,20 @@ class _NoticesTabPageState extends State<NoticesTabPage> {
       ),
     );
     if (ok == true) {
-      await sl<ContentRepository>().deleteNotice(n.id);
-      _refresh();
+      try {
+        await sl<ContentRepository>().deleteNotice(n.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notice deleted')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete notice: $e')),
+          );
+        }
+      }
     }
   }
 

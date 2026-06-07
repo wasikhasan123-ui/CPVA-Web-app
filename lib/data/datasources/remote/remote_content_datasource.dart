@@ -116,21 +116,19 @@ class RemoteContentDataSource {
 
   Future<void> deleteWhere(String id) async {
     if (!kIsWeb) return;
-    try {
-      await _firestore.deleteDocument(_collection, id);
-      return;
-    } catch (_) {
-      // Fall through to data-field search below
-    }
+
     final results = await _firestore.queryWhere(_collection, 'id', id);
+
     if (results.isNotEmpty) {
-      final docId = results.first['id']?.toString() ?? '';
-      if (docId.isNotEmpty) {
-        await _firestore.deleteDocument(_collection, docId);
-        return;
+      for (final doc in results) {
+        final docId = doc['docId']?.toString() ?? doc['id']?.toString() ?? '';
+        if (docId.isNotEmpty) {
+          await _firestore.deleteDocument(_collection, docId);
+        }
       }
+      return;
     }
-    throw Exception(
-        'No document with id "$id" found in $_collection collection');
+
+    await _firestore.deleteDocument(_collection, id);
   }
 }

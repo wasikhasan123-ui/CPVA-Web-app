@@ -6,10 +6,12 @@ import '../../domain/entities/notice_entity.dart';
 
 abstract class ContentRepository {
   Future<List<NoticeEntity>> getNotices();
+  Stream<List<NoticeEntity>> streamNotices();
   Future<List<EventEntity>> getEvents();
   Future<List<NewsEntity>> getNews();
   Future<List<GalleryEntity>> getGallery();
   Future<List<ContactEntity>> getContacts();
+  Stream<List<ContactEntity>> streamContacts();
 
   Future<void> saveNotice(NoticeEntity notice);
   Future<void> deleteNotice(String id);
