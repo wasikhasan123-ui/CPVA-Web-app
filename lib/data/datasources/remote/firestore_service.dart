@@ -52,6 +52,23 @@ class FirestoreService {
     await _db.collection(collection).add(data);
   }
 
+  Stream<List<Map<String, dynamic>>> collectionStreamWhere(
+    String collection,
+    String field,
+    Object value,
+  ) {
+    return _db
+        .collection(collection)
+        .where(field, isEqualTo: value)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) {
+              final data = d.data();
+              data['docId'] = d.id;
+              data['id'] = data['id'] ?? d.id;
+              return data;
+            }).toList());
+  }
+
   Future<List<Map<String, dynamic>>> queryWhere(
     String collection,
     String field,

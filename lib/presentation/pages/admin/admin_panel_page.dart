@@ -882,6 +882,17 @@ class _AdminPanelPageState extends State<AdminPanelPage>
                   ),
                 ],
               ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () => _removeMember(app),
+                    icon: const Icon(Icons.person_off, size: 16, color: AppColors.error),
+                    label: const Text('Remove Member / Revoke Access',
+                        style: TextStyle(color: AppColors.error)),
+                  ),
+                ],
+              ),
             ],
           ],
         ),
@@ -1037,6 +1048,72 @@ class _AdminPanelPageState extends State<AdminPanelPage>
     if (ok == true) {
       await _dataSource.deleteApplication(app.id);
       await _loadApplications();
+    }
+  }
+
+  Future<void> _removeMember(MembershipApplication app) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: AppColors.error),
+            SizedBox(width: 8),
+            Text('Revoke Member Access'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${app.name} (${app.mobile}) will be removed.'),
+            const SizedBox(height: 8),
+            const Text(
+              'This permanent action:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const Text('\u2022 Deletes the member profile'),
+            const Text('\u2022 Revokes login access'),
+            const SizedBox(height: 8),
+            Text(
+              'The member will no longer be able to log in or access the app.',
+              style: TextStyle(
+                color: AppColors.error,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Permanently Remove'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      final docId = _memberDocId(app);
+      final firestore = sl<FirestoreService>();
+      if (app.authUid.isNotEmpty) {
+        await firestore.deleteDocument('memberAuth', app.authUid);
+      }
+      await firestore.deleteDocument('members', docId);
+      await _loadApplications();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${app.name} removed and access revoked.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -1299,6 +1376,13 @@ class _AdminPanelPageState extends State<AdminPanelPage>
           app.password,
         );
       }
+      if (app.authUid.isNotEmpty) {
+        final firestore = sl<FirestoreService>();
+        await firestore.setDocument('memberAuth', app.authUid, {
+          'memberId': _memberDocId(app),
+          'approvedAt': DateTime.now().toIso8601String(),
+        });
+      }
       await _loadApplications();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1398,6 +1482,9 @@ class _AdminPanelPageState extends State<AdminPanelPage>
     if (confirmed == true) {
       await _dataSource.rejectApplication(
           app.id, reasonController.text.trim());
+      if (app.authUid.isNotEmpty) {
+        await sl<FirestoreService>().deleteDocument('memberAuth', app.authUid);
+      }
       await _loadApplications();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

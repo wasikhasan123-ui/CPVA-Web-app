@@ -161,11 +161,12 @@ class RegistrationRemoteDataSource {
   }
 
   Future<void> submitApplication(MembershipApplication app) async {
-    await _loadAll();
-    _cached!.add(app);
     if (kIsWeb) {
       await _firestore.setDocument(_collection, app.id, app.toJson());
+      _invalidateCache();
     } else {
+      await _loadAll();
+      _cached!.add(app);
       await _persist();
     }
   }

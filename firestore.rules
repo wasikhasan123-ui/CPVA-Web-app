@@ -20,6 +20,19 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function isApprovedMember() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/memberAuth/$(request.auth.uid));
+    }
+
+    function hasPendingStatus() {
+      return request.resource.data.status == 'pending';
+    }
+
+    function isEmptyString(value) {
+      return value == '';
+    }
+
     match /admins/{uid} {
       allow read: if isAdmin() || isOwnerUid(uid);
       allow create, update, delete: if false;
@@ -32,7 +45,9 @@ service cloud.firestore {
 
     match /registrations/{registrationId} {
       allow create: if signedIn()
-        && request.resource.data.authUid == request.auth.uid;
+        && request.resource.data.authUid == request.auth.uid
+        && hasPendingStatus()
+        && request.resource.data.password == '';
 
       allow read: if isAdmin()
         || (signedIn() && resource.data.authUid == request.auth.uid);
@@ -66,13 +81,22 @@ service cloud.firestore {
     }
 
     match /payments/{paymentId} {
-      allow create: if emailVerified()
-        && request.resource.data.memberAuthUid == request.auth.uid;
+      allow create: if isApprovedMember()
+        && request.resource.data.memberAuthUid == request.auth.uid
+        && hasPendingStatus()
+        && isEmptyString(request.resource.data.reviewedAt)
+        && isEmptyString(request.resource.data.reviewedBy)
+        && isEmptyString(request.resource.data.rejectionReason);
 
       allow read: if isAdmin()
-        || (emailVerified() && resource.data.memberAuthUid == request.auth.uid);
+        || (isApprovedMember() && resource.data.memberAuthUid == request.auth.uid);
 
       allow update, delete: if isAdmin();
+    }
+
+    match /memberAuth/{authUid} {
+      allow read: if isAdmin() || isOwnerUid(authUid);
+      allow create, update, delete: if isAdmin();
     }
 
     match /passwords/{docId} {

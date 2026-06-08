@@ -42,10 +42,11 @@ class PaymentRemoteDataSource {
       return Stream.value(const <PaymentSubmission>[]);
     }
 
-    return _firestore.collectionStream(_collection).map((data) {
+    return _firestore
+        .collectionStreamWhere(_collection, 'memberAuthUid', authUid)
+        .map((data) {
       final list = data
           .map((d) => PaymentSubmission.fromJson(Map<String, dynamic>.from(d)))
-          .where((p) => p.memberAuthUid == authUid)
           .toList();
 
       list.sort((a, b) => b.submittedAt.compareTo(a.submittedAt));

@@ -7,6 +7,7 @@ import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../data/datasources/member_remote_datasource.dart';
 import '../../../../data/datasources/registration_remote_datasource.dart';
+import '../../../../data/datasources/remote/firestore_service.dart';
 import '../../../widgets/section_state.dart';
 
 class AdminDashboardTab extends StatefulWidget {
@@ -197,6 +198,8 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           () => context.push('/edit-contact')),
       _QuickAction('Member Directory', Icons.people, Colors.teal,
           () => context.push('/members')),
+      _QuickAction('Repair MemberAuth', Icons.build_circle, Colors.red,
+          () => _repairMemberAuth(context)),
     ];
     return SizedBox(
       height: 90,
@@ -444,6 +447,153 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _repairMemberAuth(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.build_circle, color: Colors.red),
+            SizedBox(width: 8),
+            Expanded(
+              child: Text('Repair MemberAuth',
+                  style: TextStyle(fontSize: 16)),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will scan all members and create/update '
+              'memberAuth documents for every member that '
+              'has an authUid.',
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Members without an authUid will be skipped and '
+              'reported.',
+              style: TextStyle(color: Colors.orange),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'No member documents will be deleted or modified.',
+              style: TextStyle(color: AppColors.success, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Run Repair'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final members = await sl<MemberRemoteDataSource>().getAllMembers();
+    final firestore = sl<FirestoreService>();
+    int created = 0;
+    int skipped = 0;
+    int errors = 0;
+    final List<String> errorDetails = [];
+
+    for (final member in members) {
+      try {
+        if (member.authUid.isEmpty) {
+          skipped++;
+          continue;
+        }
+        await firestore.setDocument('memberAuth', member.authUid, {
+          'memberId': member.id,
+          'memberName': member.name,
+          'email': member.email,
+          'mobile': member.mobile,
+          'repairedAt': DateTime.now().toIso8601String(),
+        });
+        created++;
+      } catch (e) {
+        errors++;
+        errorDetails.add('${member.id}: $e');
+      }
+    }
+
+    if (!context.mounted) return;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Repair Complete'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _summaryRow('Created/Updated', '$created', AppColors.success),
+            const SizedBox(height: 6),
+            _summaryRow('Skipped (no authUid)', '$skipped', Colors.orange),
+            const SizedBox(height: 6),
+            _summaryRow('Errors', '$errors', AppColors.error),
+            if (errorDetails.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text('Error details:',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: 150,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: errorDetails.map((e) => Text(
+                      e,
+                      style: const TextStyle(fontSize: 11, color: AppColors.error),
+                    )).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+
+    setState(() {});
+  }
+
+  Widget _summaryRow(String label, String value, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Text(label, style: const TextStyle(fontSize: 13)),
+        const Spacer(),
+        Text(value,
+            style: TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w700, color: color)),
+      ],
     );
   }
 
