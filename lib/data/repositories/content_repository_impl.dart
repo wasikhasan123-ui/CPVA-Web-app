@@ -155,11 +155,8 @@ class ContentRepositoryImpl implements ContentRepository {
   Future<void> saveEvent(EventEntity event) async {
     if (kIsWeb) {
       await _ensureSeed();
-      final remote = await _events.getAll();
-      if (remote.isNotEmpty) {
-        await _events.set(event.id, event.toJson());
-        return;
-      }
+      await _events.set(event.id, event.toJson());
+      return;
     }
     final list = await _service.getEvents();
     final idx = list.indexWhere((e) => e.id == event.id);
@@ -187,11 +184,8 @@ class ContentRepositoryImpl implements ContentRepository {
   Future<void> saveNews(NewsEntity news) async {
     if (kIsWeb) {
       await _ensureSeed();
-      final remote = await _news.getAll();
-      if (remote.isNotEmpty) {
-        await _news.set(news.id, news.toJson());
-        return;
-      }
+      await _news.set(news.id, news.toJson());
+      return;
     }
     final list = await _service.getNews();
     final idx = list.indexWhere((e) => e.id == news.id);

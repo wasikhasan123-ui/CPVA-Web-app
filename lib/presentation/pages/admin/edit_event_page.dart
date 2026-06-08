@@ -68,7 +68,7 @@ class _EditEventPageState extends State<EditEventPage> {
       isUpcoming: _isUpcoming,
     );
     await sl<ContentRepository>().saveEvent(event);
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context, true);
   }
 
   @override
