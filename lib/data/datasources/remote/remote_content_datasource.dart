@@ -27,7 +27,7 @@ class RemoteContentDataSource {
     }
     if (_permanentFlagKey != null) {
       final prefs = await SharedPreferences.getInstance();
-      if (prefs.getBool(_permanentFlagKey!) == true) {
+      if (prefs.getBool(_permanentFlagKey) == true) {
         await prefs.setBool(_seedFlagKey, true);
         return;
       }
@@ -35,8 +35,6 @@ class RemoteContentDataSource {
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(_seedFlagKey) == true) return;
 
-    // Check if data already exists in Firestore.
-    // If read fails (e.g. permission denied for unverified user), skip seeding.
     List<Map<String, dynamic>> existing;
     try {
       existing = await _firestore.getCollection(_collection);
@@ -46,14 +44,13 @@ class RemoteContentDataSource {
 
     if (existing.isNotEmpty) {
       await prefs.setBool(_seedFlagKey, true);
-      if (_permanentFlagKey != null) {
-        await prefs.setBool(_permanentFlagKey!, true);
+      final flagKey = _permanentFlagKey;
+      if (flagKey != null) {
+        await prefs.setBool(flagKey, true);
       }
       return;
     }
 
-    // Collection is empty — try to seed. Requires write permission (admin only).
-    // If user is not admin, the write will throw permission-denied — catch and skip.
     try {
       final raw = await rootBundle.loadString('assets/data/$assetName.json');
       final data = json.decode(raw) as Map<String, dynamic>;
@@ -67,11 +64,11 @@ class RemoteContentDataSource {
         }
       }
       await prefs.setBool(_seedFlagKey, true);
-      if (_permanentFlagKey != null) {
-        await prefs.setBool(_permanentFlagKey!, true);
+      final flagKey = _permanentFlagKey;
+      if (flagKey != null) {
+        await prefs.setBool(flagKey, true);
       }
     } catch (_) {
-      // Write permission denied (non-admin user) — skip seeding silently.
     }
   }
 

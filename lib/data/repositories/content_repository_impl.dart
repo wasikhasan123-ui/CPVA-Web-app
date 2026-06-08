@@ -38,17 +38,7 @@ class ContentRepositoryImpl implements ContentRepository {
   }
 
   // ---------------------------------------------------------------------------
-  // READ helpers
-  //
-  // Pattern for every getter:
-  //   1. Try _ensureSeed() (safe — never throws after the datasource fix).
-  //   2. Read from Firestore via getAll().
-  //      - If Firestore returns data  → return it (even if empty list).
-  //      - If Firestore READ FAILS    → fall back to bundled local JSON.
-  //
-  // This means:
-  //   • Admin deletes all events → members see "No events" (empty state) ✓
-  //   • Network dies             → members see bundled seed data        ✓
+  // NOTICES
   // ---------------------------------------------------------------------------
 
   @override
@@ -89,6 +79,10 @@ class ContentRepositoryImpl implements ContentRepository {
     return b.date.compareTo(a.date);
   }
 
+  // ---------------------------------------------------------------------------
+  // EVENTS
+  // ---------------------------------------------------------------------------
+
   @override
   Future<List<EventEntity>> getEvents() async {
     if (!kIsWeb) return _service.getEvents();
@@ -102,6 +96,20 @@ class ContentRepositoryImpl implements ContentRepository {
       return _service.getEvents();
     }
   }
+
+  @override
+  Stream<List<EventEntity>> streamEvents() {
+    if (!kIsWeb) return Stream.fromFuture(_service.getEvents());
+    return Stream.fromFuture(_ensureSeed()).asyncExpand((_) {
+      return _events.streamAll().map((data) => data
+          .map((d) => EventEntity.fromJson(Map<String, dynamic>.from(d)))
+          .toList());
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // NEWS
+  // ---------------------------------------------------------------------------
 
   @override
   Future<List<NewsEntity>> getNews() async {
@@ -118,6 +126,20 @@ class ContentRepositoryImpl implements ContentRepository {
   }
 
   @override
+  Stream<List<NewsEntity>> streamNews() {
+    if (!kIsWeb) return Stream.fromFuture(_service.getNews());
+    return Stream.fromFuture(_ensureSeed()).asyncExpand((_) {
+      return _news.streamAll().map((data) => data
+          .map((d) => NewsEntity.fromJson(Map<String, dynamic>.from(d)))
+          .toList());
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // GALLERY
+  // ---------------------------------------------------------------------------
+
+  @override
   Future<List<GalleryEntity>> getGallery() async {
     if (!kIsWeb) return _service.getGallery();
     try {
@@ -130,6 +152,20 @@ class ContentRepositoryImpl implements ContentRepository {
       return _service.getGallery();
     }
   }
+
+  @override
+  Stream<List<GalleryEntity>> streamGallery() {
+    if (!kIsWeb) return Stream.fromFuture(_service.getGallery());
+    return Stream.fromFuture(_ensureSeed()).asyncExpand((_) {
+      return _gallery.streamAll().map((data) => data
+          .map((d) => GalleryEntity.fromJson(Map<String, dynamic>.from(d)))
+          .toList());
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // CONTACTS
+  // ---------------------------------------------------------------------------
 
   @override
   Future<List<ContactEntity>> getContacts() async {

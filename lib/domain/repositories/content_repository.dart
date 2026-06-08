@@ -8,8 +8,11 @@ abstract class ContentRepository {
   Future<List<NoticeEntity>> getNotices();
   Stream<List<NoticeEntity>> streamNotices();
   Future<List<EventEntity>> getEvents();
+  Stream<List<EventEntity>> streamEvents();
   Future<List<NewsEntity>> getNews();
+  Stream<List<NewsEntity>> streamNews();
   Future<List<GalleryEntity>> getGallery();
+  Stream<List<GalleryEntity>> streamGallery();
   Future<List<ContactEntity>> getContacts();
   Stream<List<ContactEntity>> streamContacts();
 

@@ -10,27 +10,8 @@ import '../../../domain/repositories/content_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../widgets/section_state.dart';
 
-class NewsPage extends StatefulWidget {
+class NewsPage extends StatelessWidget {
   const NewsPage({super.key});
-
-  @override
-  State<NewsPage> createState() => _NewsPageState();
-}
-
-class _NewsPageState extends State<NewsPage> {
-  late Future<List<NewsEntity>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = sl<ContentRepository>().getNews();
-  }
-
-  void _refresh() {
-    setState(() {
-      _future = sl<ContentRepository>().getNews();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,31 +30,34 @@ class _NewsPageState extends State<NewsPage> {
             IconButton(
               icon: const Icon(Icons.add),
               tooltip: 'Add News',
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-news');
-                if (result == true) _refresh();
-              },
+              onPressed: () => context.push('/edit-news'),
             ),
         ],
       ),
       floatingActionButton: isAdmin
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-news');
-                if (result == true) _refresh();
-              },
+              onPressed: () => context.push('/edit-news'),
               icon: const Icon(Icons.add),
               label: const Text('Add News'),
               backgroundColor: AppColors.primary,
             )
           : null,
-      body: FutureBuilder<List<NewsEntity>>(
-        future: _future,
+      body: StreamBuilder<List<NewsEntity>>(
+        stream: sl<ContentRepository>().streamNews(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const LoadingState();
           }
-          final items = (snap.data ?? const [])
+          if (snap.hasError) {
+            return ErrorState(
+              message: 'Could not load news',
+              onRetry: () {
+                context.pop();
+                context.push('/news');
+              },
+            );
+          }
+          final items = (snap.data ?? const <NewsEntity>[])
             ..sort((a, b) => b.date.compareTo(a.date));
           if (items.isEmpty) {
             return const EmptyState(icon: Icons.article_outlined, title: 'No news');
@@ -106,18 +90,15 @@ class _NewsPageState extends State<NewsPage> {
                               IconButton(
                                 icon: const Icon(Icons.edit,
                                     color: AppColors.primary, size: 20),
-                                onPressed: () async {
-                                  final result = await context.push<bool>(
-                                    '/edit-news',
-                                    extra: n,
-                                  );
-                                  if (result == true) _refresh();
-                                },
+                                onPressed: () => context.push(
+                                  '/edit-news',
+                                  extra: n,
+                                ),
                               ),
                               IconButton(
                                 icon: const Icon(Icons.delete,
                                     color: AppColors.error, size: 20),
-                                onPressed: () => _confirmDelete(n),
+                                onPressed: () => _confirmDelete(context, n),
                               ),
                             ],
                           ),
@@ -198,7 +179,7 @@ class _NewsPageState extends State<NewsPage> {
     );
   }
 
-  Future<void> _confirmDelete(NewsEntity n) async {
+  Future<void> _confirmDelete(BuildContext context, NewsEntity n) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -218,8 +199,26 @@ class _NewsPageState extends State<NewsPage> {
       ),
     );
     if (ok == true) {
-      await sl<ContentRepository>().deleteNews(n.id);
-      _refresh();
+      try {
+        await sl<ContentRepository>().deleteNews(n.id);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"${n.title}" deleted.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (err) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete: $err'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
     }
   }
 

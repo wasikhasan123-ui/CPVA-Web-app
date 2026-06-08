@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
@@ -26,6 +27,13 @@ Future<void> main() async {
         messagingSenderId: '339347372151',
         appId: '1:339347372151:web:d7dcd060780dfa84562e72',
       ),
+    );
+
+    // Disable Firestore offline persistence on web.
+    // This app is always-online; caching causes stale data for members
+    // when admin updates content (cached IndexedDB survives even hard refresh).
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: false,
     );
   }
   runApp(const CpvaApp());

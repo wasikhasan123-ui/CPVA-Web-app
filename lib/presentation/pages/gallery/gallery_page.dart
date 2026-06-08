@@ -11,36 +11,8 @@ import '../../../domain/repositories/content_repository.dart';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../widgets/section_state.dart';
 
-class GalleryPage extends StatefulWidget {
+class GalleryPage extends StatelessWidget {
   const GalleryPage({super.key});
-
-  @override
-  State<GalleryPage> createState() => _GalleryPageState();
-}
-
-class _GalleryPageState extends State<GalleryPage>
-    with SingleTickerProviderStateMixin {
-  late Future<List<GalleryEntity>> _future;
-  late TabController _tab;
-
-  @override
-  void initState() {
-    super.initState();
-    _tab = TabController(length: 2, vsync: this);
-    _future = sl<ContentRepository>().getGallery();
-  }
-
-  @override
-  void dispose() {
-    _tab.dispose();
-    super.dispose();
-  }
-
-  void _refresh() {
-    setState(() {
-      _future = sl<ContentRepository>().getGallery();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,64 +21,59 @@ class _GalleryPageState extends State<GalleryPage>
             (context.read<AuthBloc>().state as AuthAuthenticated)
                 .user
                 .isAdmin;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Gallery'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.white,
-        actions: [
-          if (isAdmin)
-            IconButton(
-              icon: const Icon(Icons.add),
-              tooltip: 'Add Item',
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-gallery');
-                if (result == true) _refresh();
-              },
-            ),
-        ],
-        bottom: TabBar(
-          controller: _tab,
-          indicatorColor: AppColors.white,
-          tabs: const [
-            Tab(icon: Icon(Icons.photo), text: 'Photos'),
-            Tab(icon: Icon(Icons.video_library), text: 'Videos'),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Gallery'),
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          actions: [
+            if (isAdmin)
+              IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: 'Add Item',
+                onPressed: () => context.push('/edit-gallery'),
+              ),
           ],
-        ),
-      ),
-      floatingActionButton: isAdmin
-          ? FloatingActionButton.extended(
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-gallery');
-                if (result == true) _refresh();
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Add Item'),
-              backgroundColor: AppColors.primary,
-            )
-          : null,
-      body: FutureBuilder<List<GalleryEntity>>(
-        future: _future,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
-            return const LoadingState();
-          }
-          final items = snap.data ?? const [];
-          final photos = items.where((e) => e.type == 'photo').toList();
-          final videos = items.where((e) => e.type == 'video').toList();
-          return TabBarView(
-            controller: _tab,
-            children: [
-              _buildGrid(photos, isAdmin),
-              _buildGrid(videos, isAdmin),
+          bottom: const TabBar(
+            indicatorColor: AppColors.white,
+            tabs: [
+              Tab(icon: Icon(Icons.photo), text: 'Photos'),
+              Tab(icon: Icon(Icons.video_library), text: 'Videos'),
             ],
-          );
-        },
+          ),
+        ),
+        floatingActionButton: isAdmin
+            ? FloatingActionButton.extended(
+                onPressed: () => context.push('/edit-gallery'),
+                icon: const Icon(Icons.add),
+                label: const Text('Add Item'),
+                backgroundColor: AppColors.primary,
+              )
+            : null,
+        body: StreamBuilder<List<GalleryEntity>>(
+          stream: sl<ContentRepository>().streamGallery(),
+          builder: (context, snap) {
+            if (snap.connectionState == ConnectionState.waiting) {
+              return const LoadingState();
+            }
+            final items = snap.data ?? const [];
+            final photos = items.where((e) => e.type == 'photo').toList();
+            final videos = items.where((e) => e.type == 'video').toList();
+            return TabBarView(
+              children: [
+                _buildGrid(context, photos, isAdmin),
+                _buildGrid(context, videos, isAdmin),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildGrid(List<GalleryEntity> items, bool isAdmin) {
+  Widget _buildGrid(BuildContext context, List<GalleryEntity> items, bool isAdmin) {
     if (items.isEmpty) {
       return const EmptyState(icon: Icons.photo_library_outlined, title: 'No gallery items');
     }
@@ -210,13 +177,10 @@ class _GalleryPageState extends State<GalleryPage>
                         ),
                         icon: const Icon(Icons.edit,
                             color: AppColors.white, size: 16),
-                        onPressed: () async {
-                          final result = await context.push<bool>(
-                            '/edit-gallery',
-                            extra: g,
-                          );
-                          if (result == true) _refresh();
-                        },
+                        onPressed: () => context.push(
+                          '/edit-gallery',
+                          extra: g,
+                        ),
                       ),
                       IconButton(
                         style: IconButton.styleFrom(
@@ -226,7 +190,7 @@ class _GalleryPageState extends State<GalleryPage>
                         ),
                         icon: const Icon(Icons.delete,
                             color: AppColors.error, size: 16),
-                        onPressed: () => _confirmDelete(g),
+                        onPressed: () => _confirmDelete(context, g),
                       ),
                     ],
                   ),
@@ -238,7 +202,7 @@ class _GalleryPageState extends State<GalleryPage>
     );
   }
 
-  Future<void> _confirmDelete(GalleryEntity g) async {
+  Future<void> _confirmDelete(BuildContext context, GalleryEntity g) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -260,7 +224,7 @@ class _GalleryPageState extends State<GalleryPage>
     if (ok == true) {
       try {
         await sl<ContentRepository>().deleteGallery(g.id);
-        if (mounted) {
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('"${g.title}" deleted'),
@@ -269,7 +233,7 @@ class _GalleryPageState extends State<GalleryPage>
           );
         }
       } catch (e) {
-        if (mounted) {
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Delete failed: $e'),
@@ -279,7 +243,6 @@ class _GalleryPageState extends State<GalleryPage>
           );
         }
       }
-      _refresh();
     }
   }
 }

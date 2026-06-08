@@ -11,27 +11,8 @@ import '../../blocs/auth/auth_bloc.dart';
 import '../../widgets/section_state.dart';
 import 'event_details_page.dart';
 
-class EventsTabPage extends StatefulWidget {
+class EventsTabPage extends StatelessWidget {
   const EventsTabPage({super.key});
-
-  @override
-  State<EventsTabPage> createState() => _EventsTabPageState();
-}
-
-class _EventsTabPageState extends State<EventsTabPage> {
-  late Future<List<EventEntity>> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = sl<ContentRepository>().getEvents();
-  }
-
-  void _refresh() {
-    setState(() {
-      _future = sl<ContentRepository>().getEvents();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,31 +31,35 @@ class _EventsTabPageState extends State<EventsTabPage> {
             IconButton(
               icon: const Icon(Icons.add),
               tooltip: 'Add Event',
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-event');
-                if (result == true) _refresh();
-              },
+              onPressed: () => context.push('/edit-event'),
             ),
         ],
       ),
       floatingActionButton: isAdmin
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                final result = await context.push<bool>('/edit-event');
-                if (result == true) _refresh();
-              },
+              onPressed: () => context.push('/edit-event'),
               icon: const Icon(Icons.add),
               label: const Text('Add Event'),
               backgroundColor: AppColors.primary,
             )
           : null,
-      body: FutureBuilder<List<EventEntity>>(
-        future: _future,
+      body: StreamBuilder<List<EventEntity>>(
+        stream: sl<ContentRepository>().streamEvents(),
         builder: (context, snap) {
           if (snap.connectionState == ConnectionState.waiting) {
             return const LoadingState();
           }
-          final all = (snap.data ?? const [])
+          if (snap.hasError) {
+            return ErrorState(
+              message: 'Could not load events',
+              onRetry: () {
+                // Force rebuild by navigating away and back
+                context.pop();
+                context.push('/events-list');
+              },
+            );
+          }
+          final all = (snap.data ?? const <EventEntity>[])
             ..sort((a, b) => b.date.compareTo(a.date));
           final upcoming = all.where((e) => e.isUpcoming).toList();
           final past = all.where((e) => !e.isUpcoming).toList();
@@ -82,46 +67,43 @@ class _EventsTabPageState extends State<EventsTabPage> {
           if (all.isEmpty) {
             return const EmptyState(icon: Icons.event_outlined, title: 'No events');
           }
-          return RefreshIndicator(
-            onRefresh: () async => _refresh(),
-            child: ListView(
-              padding: const EdgeInsets.all(12),
-              children: [
-                if (upcoming.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'Upcoming',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+          return ListView(
+            padding: const EdgeInsets.all(12),
+            children: [
+              if (upcoming.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'Upcoming',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  ...upcoming.map((e) => _buildEventCard(e, isAdmin)),
-                ],
-                if (past.isNotEmpty) ...[
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'Past Events',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  ...past.map((e) => _buildEventCard(e, isAdmin)),
-                ],
+                ),
+                ...upcoming.map((e) => _buildEventCard(context, e, isAdmin)),
               ],
-            ),
+              if (past.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'Past Events',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                ...past.map((e) => _buildEventCard(context, e, isAdmin)),
+              ],
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildEventCard(EventEntity e, bool isAdmin) {
+  Widget _buildEventCard(BuildContext context, EventEntity e, bool isAdmin) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
@@ -146,18 +128,12 @@ class _EventsTabPageState extends State<EventsTabPage> {
             if (isAdmin) ...[
               IconButton(
                 icon: const Icon(Icons.edit, size: 18),
-                onPressed: () async {
-                  final result = await context.push<bool>(
-                    '/edit-event',
-                    extra: e,
-                  );
-                  if (result == true) _refresh();
-                },
+                onPressed: () => context.push('/edit-event', extra: e),
               ),
               IconButton(
                 icon: const Icon(Icons.delete,
                     size: 18, color: AppColors.error),
-                onPressed: () => _confirmDelete(e),
+                onPressed: () => _confirmDelete(context, e),
               ),
             ],
             const Icon(Icons.arrow_forward_ios, size: 14),
@@ -176,7 +152,7 @@ class _EventsTabPageState extends State<EventsTabPage> {
     );
   }
 
-  Future<void> _confirmDelete(EventEntity e) async {
+  Future<void> _confirmDelete(BuildContext context, EventEntity e) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -198,8 +174,7 @@ class _EventsTabPageState extends State<EventsTabPage> {
     if (ok == true) {
       try {
         await sl<ContentRepository>().deleteEvent(e.id);
-        _refresh();
-        if (mounted) {
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('"${e.title}" deleted.'),
@@ -208,7 +183,7 @@ class _EventsTabPageState extends State<EventsTabPage> {
           );
         }
       } catch (err) {
-        if (mounted) {
+        if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to delete event: $err'),
