@@ -174,11 +174,10 @@ class ContentRepositoryImpl implements ContentRepository {
   @override
   Future<void> deleteEvent(String id) async {
     if (kIsWeb) {
-      try {
-        await _events.delete(id);
-        return;
-      } catch (_) {}
+      await _events.deleteWhere(id);
+      return;
     }
+
     final list = await _service.getEvents();
     list.removeWhere((e) => e.id == id);
     await _service.saveEvents(list);

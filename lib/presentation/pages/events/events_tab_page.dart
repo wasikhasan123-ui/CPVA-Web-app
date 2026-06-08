@@ -196,8 +196,27 @@ class _EventsTabPageState extends State<EventsTabPage> {
       ),
     );
     if (ok == true) {
-      await sl<ContentRepository>().deleteEvent(e.id);
-      _refresh();
+      try {
+        await sl<ContentRepository>().deleteEvent(e.id);
+        _refresh();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"${e.title}" deleted.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (err) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete event: $err'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
     }
   }
 
