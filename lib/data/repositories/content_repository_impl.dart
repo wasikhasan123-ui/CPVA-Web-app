@@ -37,6 +37,20 @@ class ContentRepositoryImpl implements ContentRepository {
     await _contacts.seedFromJson('contacts', 'contacts');
   }
 
+  // ---------------------------------------------------------------------------
+  // READ helpers
+  //
+  // Pattern for every getter:
+  //   1. Try _ensureSeed() (safe — never throws after the datasource fix).
+  //   2. Read from Firestore via getAll().
+  //      - If Firestore returns data  → return it (even if empty list).
+  //      - If Firestore READ FAILS    → fall back to bundled local JSON.
+  //
+  // This means:
+  //   • Admin deletes all events → members see "No events" (empty state) ✓
+  //   • Network dies             → members see bundled seed data        ✓
+  // ---------------------------------------------------------------------------
+
   @override
   Future<List<NoticeEntity>> getNotices() async {
     if (!kIsWeb) return _service.getNotices();
@@ -78,25 +92,43 @@ class ContentRepositoryImpl implements ContentRepository {
   @override
   Future<List<EventEntity>> getEvents() async {
     if (!kIsWeb) return _service.getEvents();
-    await _ensureSeed();
-    final data = await _events.getAll();
-    return data.map((d) => EventEntity.fromJson(Map<String, dynamic>.from(d))).toList();
+    try {
+      await _ensureSeed();
+      final data = await _events.getAll();
+      return data
+          .map((d) => EventEntity.fromJson(Map<String, dynamic>.from(d)))
+          .toList();
+    } catch (_) {
+      return _service.getEvents();
+    }
   }
 
   @override
   Future<List<NewsEntity>> getNews() async {
     if (!kIsWeb) return _service.getNews();
-    await _ensureSeed();
-    final data = await _news.getAll();
-    return data.map((d) => NewsEntity.fromJson(Map<String, dynamic>.from(d))).toList();
+    try {
+      await _ensureSeed();
+      final data = await _news.getAll();
+      return data
+          .map((d) => NewsEntity.fromJson(Map<String, dynamic>.from(d)))
+          .toList();
+    } catch (_) {
+      return _service.getNews();
+    }
   }
 
   @override
   Future<List<GalleryEntity>> getGallery() async {
     if (!kIsWeb) return _service.getGallery();
-    await _ensureSeed();
-    final data = await _gallery.getAll();
-    return data.map((d) => GalleryEntity.fromJson(Map<String, dynamic>.from(d))).toList();
+    try {
+      await _ensureSeed();
+      final data = await _gallery.getAll();
+      return data
+          .map((d) => GalleryEntity.fromJson(Map<String, dynamic>.from(d)))
+          .toList();
+    } catch (_) {
+      return _service.getGallery();
+    }
   }
 
   @override
@@ -122,6 +154,10 @@ class ContentRepositoryImpl implements ContentRepository {
           .toList());
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // WRITE operations (admin only — Firestore rules enforce isAdmin)
+  // ---------------------------------------------------------------------------
 
   @override
   Future<void> saveNotice(NoticeEntity notice) async {
@@ -200,10 +236,8 @@ class ContentRepositoryImpl implements ContentRepository {
   @override
   Future<void> deleteNews(String id) async {
     if (kIsWeb) {
-      try {
-        await _news.delete(id);
-        return;
-      } catch (_) {}
+      await _news.deleteWhere(id);
+      return;
     }
     final list = await _service.getNews();
     list.removeWhere((e) => e.id == id);
