@@ -1,1 +1,110 @@
-rules_version = '2';service cloud.firestore {  match /databases/{database}/documents {    function signedIn() {      return request.auth != null;    }    function emailVerified() {      return signedIn() && request.auth.token.email_verified == true;    }    function isAdmin() {      return signedIn()        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));    }    function isOwnerUid(uid) {      return signedIn() && request.auth.uid == uid;    }    match /admins/{uid} {      allow read: if isAdmin() || isOwnerUid(uid);      allow create, update, delete: if false;    }    match /members/{memberId} {      allow read: if emailVerified();      allow create, update, delete: if isAdmin();    }    match /registrations/{registrationId} {      allow create: if signedIn()        && request.resource.data.authUid == request.auth.uid;      allow read: if isAdmin()        || (signedIn() && resource.data.authUid == request.auth.uid);      allow update, delete: if isAdmin();    }    match /notices/{id} {      allow read: if emailVerified();      allow create, update, delete: if isAdmin();    }    match /contacts/{id} {      allow read: if emailVerified();      allow create, update, delete: if isAdmin();    }    match /events/{id} {      allow read: if emailVerified();      allow create, update, delete: if isAdmin();    }    match /news/{id} {      allow read: if emailVerified();      allow create, update, delete: if isAdmin();    }    match /gallery/{id} {      allow read: if emailVerified();      allow create, update, delete: if isAdmin();    }    match /payments/{id} {      allow read, create, update, delete: if isAdmin();    }    match /passwords/{docId} {      allow read, write: if false;    }    match /{document=**} {      allow read, write: if false;    }  }}
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function emailVerified() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isOwnerUid(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isApprovedMember() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/memberAuth/$(request.auth.uid));
+    }
+
+    function hasPendingStatus() {
+      return request.resource.data.status == 'pending';
+    }
+
+    function isEmptyString(value) {
+      return value == '';
+    }
+
+    match /admins/{uid} {
+      allow read: if isAdmin() || isOwnerUid(uid);
+      allow create, update, delete: if false;
+    }
+
+    match /members/{memberId} {
+      allow read: if emailVerified();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /registrations/{registrationId} {
+      allow create: if signedIn()
+        && request.resource.data.authUid == request.auth.uid
+        && hasPendingStatus()
+        && request.resource.data.password == '';
+
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.authUid == request.auth.uid);
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /notices/{id} {
+      allow read: if emailVerified();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /contacts/{id} {
+      allow read: if emailVerified();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /events/{id} {
+      allow read: if emailVerified();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /news/{id} {
+      allow read: if emailVerified();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /gallery/{id} {
+      allow read: if emailVerified();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow create: if isApprovedMember()
+        && request.resource.data.memberAuthUid == request.auth.uid
+        && hasPendingStatus()
+        && isEmptyString(request.resource.data.reviewedAt)
+        && isEmptyString(request.resource.data.reviewedBy)
+        && isEmptyString(request.resource.data.rejectionReason);
+
+      allow read: if isAdmin()
+        || (isApprovedMember() && resource.data.memberAuthUid == request.auth.uid);
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /memberAuth/{authUid} {
+      allow read: if isAdmin() || isOwnerUid(authUid);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /passwords/{docId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
