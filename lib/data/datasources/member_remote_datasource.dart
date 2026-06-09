@@ -190,6 +190,7 @@ class MemberRemoteDataSource {
     try {
       remote = await _firestore.getCollection(_collection);
     } catch (e) {
+      print('⚠️ getAllMembers Firestore read FAILED: $e');
       return _allLocal();
     }
 
@@ -274,11 +275,16 @@ class MemberRemoteDataSource {
     final cleanEmail = email.trim().toLowerCase();
     if (cleanEmail.isEmpty) return null;
     final all = await getAllMembers();
+    print('🔍 findByEmail: looking for "$cleanEmail" in ${all.length} members');
+    for (final m in all) {
+      print('   - ${m.id}: "${m.email.trim().toLowerCase()}"');
+    }
     try {
       return all.firstWhere(
         (m) => m.email.trim().toLowerCase() == cleanEmail,
       );
     } catch (_) {
+      print('❌ findByEmail: NOT FOUND');
       return null;
     }
   }
