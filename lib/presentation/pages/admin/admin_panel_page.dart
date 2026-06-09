@@ -270,6 +270,22 @@ class _AdminPanelPageState extends State<AdminPanelPage>
         Card(
           elevation: 2,
           shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            leading: const Icon(Icons.verified_user,
+                color: Colors.deepPurple, size: 32),
+            title: const Text('Rebuild Member Auth',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: const Text(
+                'Create memberAuth docs so members can read content (run once)'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: _rebuildMemberAuth,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           child: ListTile(
@@ -723,6 +739,69 @@ class _AdminPanelPageState extends State<AdminPanelPage>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to rebuild index: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _rebuildMemberAuth() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rebuild Member Auth?'),
+        content: const Text(
+          'This will create memberAuth documents for all members who have a Firebase Auth UID. '
+          'This is required for members to be able to read content.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Rebuild'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final firestore = sl<FirestoreService>();
+      final members = await firestore.getCollection('members');
+      int count = 0;
+      for (final m in members) {
+        final authUid = (m['authUid'] ?? '').toString().trim();
+        final memberId = (m['id'] ?? '').toString().trim();
+        if (authUid.isNotEmpty) {
+          await firestore.setDocument('memberAuth', authUid, {
+            'memberId': memberId,
+            'approvedAt': DateTime.now().toIso8601String(),
+          });
+          count++;
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Member auth rebuilt: $count entries created.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to rebuild member auth: $e'),
             backgroundColor: AppColors.error,
           ),
         );
