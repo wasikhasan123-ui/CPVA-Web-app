@@ -254,6 +254,22 @@ class _AdminPanelPageState extends State<AdminPanelPage>
         Card(
           elevation: 2,
           shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
+          child: ListTile(
+            leading: const Icon(Icons.sync,
+                color: Colors.teal, size: 32),
+            title: const Text('Rebuild Member Index',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: const Text(
+                'Sync mobile→email lookup for all members (run once after migration)'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: _rebuildMemberIndex,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           child: ListTile(
@@ -650,6 +666,67 @@ class _AdminPanelPageState extends State<AdminPanelPage>
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _rebuildMemberIndex() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Rebuild Member Index?'),
+        content: const Text(
+          'This will read all members from Firestore and create/update '
+          'the memberIndex collection with mobile→email mappings. '
+          'This is needed once after migration so all members can log in with their mobile number.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: AppColors.white,
+            ),
+            child: const Text('Rebuild'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      final firestore = sl<FirestoreService>();
+      final members = await firestore.getCollection('members');
+      int count = 0;
+      for (final m in members) {
+        final mobile = (m['mobile'] ?? '').toString().trim().replaceAll(RegExp(r'[^\d]'), '');
+        final email = (m['email'] ?? '').toString().trim();
+        if (mobile.isNotEmpty && email.isNotEmpty) {
+          await firestore.setDocument('memberIndex', mobile, {'email': email});
+          count++;
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Member index rebuilt: $count entries created.'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to rebuild index: $e'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -1382,6 +1459,10 @@ class _AdminPanelPageState extends State<AdminPanelPage>
           'memberId': _memberDocId(app),
           'approvedAt': DateTime.now().toIso8601String(),
         });
+        // Write mobile → email to memberIndex for login lookup
+        await firestore.setDocument('memberIndex', _memberDocId(app), {
+          'email': app.email.trim(),
+        });
       }
       await _loadApplications();
       if (mounted) {
@@ -1434,6 +1515,10 @@ class _AdminPanelPageState extends State<AdminPanelPage>
         'authUid': app.authUid,
       };
       await firestore.setDocument('members', docId, memberData);
+      // Write mobile → email to memberIndex for login lookup
+      await firestore.setDocument('memberIndex', docId, {
+        'email': app.email.trim(),
+      });
     } catch (e) {
       // ignore - app may not be running on web
     }

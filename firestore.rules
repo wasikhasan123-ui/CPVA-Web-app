@@ -43,6 +43,13 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
+    // Public mobile → email lookup for login.
+    // Only stores {email: "x@y.com"} per doc — no sensitive data.
+    match /memberIndex/{mobile} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
     match /registrations/{registrationId} {
       allow create: if signedIn()
         && request.resource.data.authUid == request.auth.uid

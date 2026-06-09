@@ -25,6 +25,20 @@ class FirestoreService {
     }).toList();
   }
 
+  /// Read a single document by ID. Returns null if it doesn't exist.
+  Future<Map<String, dynamic>?> getDocument(
+    String collection,
+    String id,
+  ) async {
+    final doc = await _db.collection(collection).doc(id).get();
+    if (!doc.exists) return null;
+    final data = doc.data();
+    if (data == null) return null;
+    data['docId'] = doc.id;
+    data['id'] = data['id'] ?? doc.id;
+    return data;
+  }
+
   Future<void> setDocument(
     String collection,
     String id,

@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../../data/datasources/member_remote_datasource.dart';
 import '../../data/datasources/registration_remote_datasource.dart';
+import '../../data/datasources/remote/firestore_service.dart';
 import '../../data/datasources/remote/password_service.dart';
 import '../../domain/entities/member_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -17,6 +18,7 @@ class AuthRepositoryImpl implements AuthRepository {
   final MemberRemoteDataSource _dataSource;
   final RegistrationRemoteDataSource _regDs;
   final PasswordService _passwordService;
+  final FirestoreService _firestoreService;
   final fb_auth.FirebaseAuth _firebaseAuth = fb_auth.FirebaseAuth.instance;
   static const String _kLoggedInMemberId = 'logged_in_member_id';
   static const String _kPasswordResetCodePrefix = 'cpva_pw_reset_code_';
@@ -24,8 +26,14 @@ class AuthRepositoryImpl implements AuthRepository {
   static const String _kPasswordResetExpiryPrefix = 'cpva_pw_reset_expiry_';
   static const String _kMemberPasswords = 'cpva_member_passwords_v1';
   static const String _adminMobile = '01853548853';
+  static const String _memberIndexCollection = 'memberIndex';
 
-  AuthRepositoryImpl(this._dataSource, this._regDs, this._passwordService);
+  AuthRepositoryImpl(
+    this._dataSource,
+    this._regDs,
+    this._passwordService,
+    this._firestoreService,
+  );
 
   String get _defaultPassword {
     return 'cpva2026';
@@ -39,12 +47,10 @@ class AuthRepositoryImpl implements AuthRepository {
     return v;
   }
 
-  // TODO: Remove _hashPassword after Firebase Auth migration is complete.
   String _hashPassword(String password) {
     return base64Url.encode(utf8.encode('cpva_v1_$password'));
   }
 
-  // TODO: Remove _verifyPassword after Firebase Auth migration is complete.
   bool _verifyPassword(String password, String hash) {
     if (hash.isEmpty) return false;
     return _hashPassword(password) == hash;
@@ -61,6 +67,35 @@ class AuthRepositoryImpl implements AuthRepository {
       return null;
     }
     return await _dataSource.findByMobile(cleanMobile);
+  }
+
+  /// Look up a member's email from their mobile number.
+  /// First tries the public memberIndex collection (works without auth).
+  /// Falls back to the full members list (requires auth — may fail at login time).
+  Future<String?> _lookupEmailByMobile(String cleanMobile) async {
+    // 1. Try memberIndex (public, no auth needed)
+    if (kIsWeb) {
+      try {
+        final doc = await _firestoreService.getDocument(
+          _memberIndexCollection,
+          cleanMobile,
+        );
+        if (doc != null) {
+          final email = (doc['email'] ?? '').toString().trim();
+          if (email.isNotEmpty) return email;
+        }
+      } catch (_) {
+        // memberIndex read failed — try fallback
+      }
+    }
+
+    // 2. Fall back to full member list (bundled JSON + Firestore if authed)
+    final member = await _dataSource.findByMobile(cleanMobile);
+    if (member != null && member.email.trim().isNotEmpty) {
+      return member.email.trim();
+    }
+
+    return null;
   }
 
   Future<Either<Failure, MemberEntity>> _firebaseLogin(
@@ -135,17 +170,10 @@ class AuthRepositoryImpl implements AuthRepository {
             AuthFailure('Invalid mobile number format. Use 01XXXXXXXXX'));
       }
 
-      final member = await _dataSource.findByMobile(cleanMobile);
-      if (member == null) {
+      final email = await _lookupEmailByMobile(cleanMobile);
+      if (email == null || email.isEmpty) {
         return const Left(
             AuthFailure('No member found with this mobile number.'));
-      }
-
-      final email = member.email.trim();
-      if (email.isEmpty) {
-        return const Left(AuthFailure(
-          'This account has no email. Please contact admin to activate Firebase login.',
-        ));
       }
 
       return _firebaseLogin(email, password);
@@ -188,12 +216,9 @@ class AuthRepositoryImpl implements AuthRepository {
         }
       }
 
-      // TODO: Remove legacy fallback after Firebase Auth migration is complete.
-      final prefs = await SharedPreferences.getInstance();
-      final id = prefs.getString(_kLoggedInMemberId);
-      if (id == null) return const Right(null);
-      final member = await _dataSource.findById(id);
-      return Right(member);
+      // No Firebase Auth session → user is not logged in.
+      // They will be redirected to the login page by the router.
+      return const Right(null);
     } catch (e) {
       return Left(AuthFailure(e.toString()));
     }
@@ -274,8 +299,6 @@ class AuthRepositoryImpl implements AuthRepository {
     String email,
     String code,
   ) async {
-    // TODO: Firebase handles password reset by email link.
-    // Remove old code verification UI after migration.
     return const Right(true);
   }
 
@@ -284,8 +307,6 @@ class AuthRepositoryImpl implements AuthRepository {
     String email,
     String newPassword,
   ) async {
-    // TODO: Firebase password reset is handled by email link.
-    // This method is kept for compatibility during migration.
     return const Right(null);
   }
 
@@ -329,9 +350,6 @@ class AuthRepositoryImpl implements AuthRepository {
     String memberId,
     String password,
   ) async {
-    // TODO: For production, account creation/password setup
-    // should happen through Firebase Auth sign-up or admin backend.
-    // Admin cannot set another user's password via client SDK.
     return const Right(null);
   }
 

@@ -49,6 +49,7 @@ Future<void> resetDependencies() async {
       sl<MemberRemoteDataSource>(),
       sl<RegistrationRemoteDataSource>(),
       sl<PasswordService>(),
+      sl<FirestoreService>(),
     ),
   );
   sl.registerLazySingleton<RemoteContentDataSource>(
